@@ -24,6 +24,12 @@ export function DashboardHeader() {
     await supabase.auth.signOut()
   }
 
+  const toggleTheme = () => {
+    if (theme && setTheme) {
+      setTheme(theme === 'dark' ? 'light' : 'dark')
+    }
+  }
+
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-6">
@@ -36,20 +42,26 @@ export function DashboardHeader() {
             variant="ghost"
             size="icon"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || false}
           >
             <Icons.activity className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            <Icons.sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Icons.moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+          <HydrationBoundary fallback={
+            <Button variant="ghost" size="icon" disabled>
+              <Icons.sun className="h-4 w-4" />
+            </Button>
+          }>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+            >
+              <Icons.sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Icons.moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </HydrationBoundary>
 
           <HydrationBoundary fallback={
             <div className="flex items-center space-x-2 text-sm">
@@ -58,7 +70,7 @@ export function DashboardHeader() {
           }>
             <div className="flex items-center space-x-2 text-sm">
               <span className="text-muted-foreground">Welcome,</span>
-              <span className="font-medium">{user?.full_name || user?.email}</span>
+              <span className="font-medium">{user?.full_name || user?.email || 'User'}</span>
             </div>
           </HydrationBoundary>
 

@@ -13,6 +13,11 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading, isInitialized, hasHydrated } = useAuthStore()
   const router = useRouter()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (hasHydrated && isInitialized && !isLoading && !isAuthenticated) {
@@ -20,8 +25,8 @@ export default function DashboardLayout({
     }
   }, [hasHydrated, isInitialized, isAuthenticated, isLoading, router])
 
-  // Show loading until hydration and auth check completes
-  if (!hasHydrated || !isInitialized || isLoading) {
+  // Show loading until mounted, hydration and auth check completes
+  if (!isMounted || !hasHydrated || !isInitialized || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">

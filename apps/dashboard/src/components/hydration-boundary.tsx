@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 
 interface HydrationBoundaryProps {
@@ -8,10 +9,15 @@ interface HydrationBoundaryProps {
 }
 
 export function HydrationBoundary({ children, fallback }: HydrationBoundaryProps) {
+  const [isMounted, setIsMounted] = useState(false)
   const hasHydrated = useAuthStore(state => state.hasHydrated)
   
-  if (!hasHydrated) {
-    return fallback || null
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+  
+  if (!isMounted || !hasHydrated) {
+    return <>{fallback || null}</>
   }
   
   return <>{children}</>
