@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth'
 import { DashboardNav } from '@/components/dashboard/nav'
@@ -11,16 +11,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, hasHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (hasHydrated && !isLoading && !isAuthenticated) {
       router.push('/auth/signin')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [hasHydrated, isAuthenticated, isLoading, router])
 
-  if (isLoading) {
+  // Show loading until hydration completes
+  if (!hasHydrated || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
