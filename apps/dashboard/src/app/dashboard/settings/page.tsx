@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Icons } from '@/components/icons'
 import { useAuthStore } from '@/stores/auth'
+import { HydrationBoundary } from '@/components/hydration-boundary'
 
 export default function SettingsPage() {
   const { user } = useAuthStore()
@@ -27,15 +28,29 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Full Name</label>
-              <Input defaultValue={user?.full_name || ''} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input defaultValue={user?.email || ''} disabled />
-            </div>
-            <Button>Save Changes</Button>
+            <HydrationBoundary fallback={
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Full Name</label>
+                  <Input placeholder="Loading..." disabled />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <Input placeholder="Loading..." disabled />
+                </div>
+                <Button disabled>Loading...</Button>
+              </div>
+            }>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full Name</label>
+                <Input defaultValue={user?.full_name || ''} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <Input defaultValue={user?.email || ''} disabled />
+              </div>
+              <Button>Save Changes</Button>
+            </HydrationBoundary>
           </CardContent>
         </Card>
 

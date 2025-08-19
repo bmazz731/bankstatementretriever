@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/stores/auth'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useDashboardStore } from '@/stores/dashboard'
+import { HydrationBoundary } from '@/components/hydration-boundary'
 
 export function DashboardHeader() {
   const { theme, setTheme } = useTheme()
@@ -50,10 +51,16 @@ export function DashboardHeader() {
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          <div className="flex items-center space-x-2 text-sm">
-            <span className="text-muted-foreground">Welcome,</span>
-            <span className="font-medium">{user?.full_name || user?.email}</span>
-          </div>
+          <HydrationBoundary fallback={
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="text-muted-foreground">Welcome</span>
+            </div>
+          }>
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="text-muted-foreground">Welcome,</span>
+              <span className="font-medium">{user?.full_name || user?.email}</span>
+            </div>
+          </HydrationBoundary>
 
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
             Sign out

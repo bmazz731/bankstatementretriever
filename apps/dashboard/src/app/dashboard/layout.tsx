@@ -11,17 +11,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isLoading, isInitialized } = useAuthStore()
+  const { isAuthenticated, isLoading, isInitialized, hasHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (isInitialized && !isLoading && !isAuthenticated) {
+    if (hasHydrated && isInitialized && !isLoading && !isAuthenticated) {
       router.push('/auth/signin')
     }
-  }, [isInitialized, isAuthenticated, isLoading, router])
+  }, [hasHydrated, isInitialized, isAuthenticated, isLoading, router])
 
-  // Show loading until auth check completes
-  if (!isInitialized || isLoading) {
+  // Show loading until hydration and auth check completes
+  if (!hasHydrated || !isInitialized || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">

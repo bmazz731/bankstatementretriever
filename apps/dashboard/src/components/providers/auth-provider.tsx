@@ -6,11 +6,14 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setLoading, setInitialized } = useAuthStore()
+  const { setUser, setLoading, setInitialized, hasHydrated } = useAuthStore()
   const router = useRouter()
   const supabase = createSupabaseClient()
 
   useEffect(() => {
+    // Wait for hydration before initializing auth
+    if (!hasHydrated) return
+
     // Get initial session immediately on client
     const getInitialSession = async () => {
       try {
@@ -61,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [setUser, setLoading, setInitialized, router, supabase.auth])
+  }, [setUser, setLoading, setInitialized, router, supabase.auth, hasHydrated])
 
   return <>{children}</>
 }
