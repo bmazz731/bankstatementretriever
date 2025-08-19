@@ -27,7 +27,7 @@ export default function DestinationsPage() {
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Icons.plus className="mr-2 h-4 w-4" />
+          <Icons.add className="mr-2 h-4 w-4" />
           Add Destination
         </Button>
       </div>
@@ -41,7 +41,7 @@ export default function DestinationsPage() {
         </CardHeader>
         <CardContent>
           <DestinationGrid 
-            destinations={destinations?.data?.destinations || []}
+            destinations={(destinations as any)?.data?.destinations || []}
             isLoading={isLoading}
           />
         </CardContent>
