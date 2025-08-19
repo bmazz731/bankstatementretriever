@@ -3,18 +3,61 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth'
-import { DashboardNav } from '@/components/dashboard/nav'
-import { DashboardHeader } from '@/components/dashboard/header'
-import { ClientOnly } from '@/components/client-only'
+import { ErrorBoundary } from '@/components/error-boundary'
 
-// Loading component to prevent hydration issues
+// Simple loading screen with no dynamic content
 function LoadingScreen() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-        <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ 
+          width: '32px', 
+          height: '32px', 
+          border: '2px solid #ccc',
+          borderTop: '2px solid #000',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto'
+        }}></div>
+        <p style={{ marginTop: '10px', color: '#666' }}>Loading dashboard...</p>
       </div>
+    </div>
+  )
+}
+
+// Minimal dashboard layout to test React Error #130
+function MinimalDashboard({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <header style={{ 
+        borderBottom: '1px solid #ccc', 
+        paddingBottom: '10px', 
+        marginBottom: '20px' 
+      }}>
+        <h1>BSR Dashboard</h1>
+        <button 
+          onClick={() => window.location.href = '/auth/signin'}
+          style={{
+            padding: '5px 10px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Sign Out
+        </button>
+      </header>
+      <main>
+        {children}
+      </main>
     </div>
   )
 }
@@ -24,10 +67,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const { isAuthenticated, isLoading, isInitialized, hasHydrated } = useAuthStore()
+  const router = useRouter()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Don't render anything until mounted on client
+  if (!isMounted) {
+    return <LoadingScreen />
+  }
+
   return (
-    <ClientOnly fallback={<LoadingScreen />}>
+    <ErrorBoundary>
       <DashboardContent>{children}</DashboardContent>
-    </ClientOnly>
+    </ErrorBoundary>
   )
 }
 
@@ -36,33 +92,30 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    if (hasHydrated && isInitialized && !isLoading && !isAuthenticated) {
-      router.push('/auth/signin')
-    }
+    // Only redirect if we're sure the user is not authenticated
+    const timer = setTimeout(() => {
+      if (hasHydrated && isInitialized && !isLoading && !isAuthenticated) {
+        router.push('/auth/signin')
+      }
+    }, 1000) // Give time for auth to initialize
+
+    return () => clearTimeout(timer)
   }, [hasHydrated, isInitialized, isAuthenticated, isLoading, router])
 
-  // Show loading until hydration and auth check completes
+  // Show loading until hydration completes
   if (!hasHydrated || !isInitialized || isLoading) {
     return <LoadingScreen />
   }
 
+  // Show loading if not authenticated (while redirecting)
   if (!isAuthenticated) {
     return <LoadingScreen />
   }
 
+  // Use minimal dashboard to avoid any complex component issues
   return (
-    <div className="flex h-screen bg-background">
-      <ClientOnly fallback={<div className="w-64 border-r bg-card" />}>
-        <DashboardNav />
-      </ClientOnly>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <ClientOnly fallback={<div className="h-14 border-b bg-card" />}>
-          <DashboardHeader />
-        </ClientOnly>
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    <ErrorBoundary>
+      <MinimalDashboard>{children}</MinimalDashboard>
+    </ErrorBoundary>
   )
 }
