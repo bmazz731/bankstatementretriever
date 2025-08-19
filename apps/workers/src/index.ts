@@ -22,7 +22,6 @@ const app = new Hono<{ Bindings: Env }>()
 // Middleware
 app.use('*', cors({
   origin: [
-    'https://bankstatementretriever.vercel.app',
     'https://app.bankstatementretriever.com',
     'https://bankstatementretriever.com',
     /^https:\/\/.*\.bankstatementretriever\.com$/,

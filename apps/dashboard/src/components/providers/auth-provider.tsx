@@ -17,16 +17,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session immediately on client
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        setLoading(true)
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Session error:', error)
+          setUser(null)
+          return
+        }
+
         if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            full_name: session.user.user_metadata?.full_name,
-            avatar_url: session.user.user_metadata?.avatar_url,
-            created_at: session.user.created_at,
-            updated_at: session.user.updated_at || session.user.created_at,
-          })
+          const userData = {
+            id: session.user.id || '',
+            email: session.user.email || '',
+            full_name: session.user.user_metadata?.full_name || null,
+            avatar_url: session.user.user_metadata?.avatar_url || null,
+            created_at: session.user.created_at || new Date().toISOString(),
+            updated_at: session.user.updated_at || session.user.created_at || new Date().toISOString(),
+          }
+          setUser(userData)
         } else {
           setUser(null)
         }
@@ -44,15 +53,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email)
+        
         if (event === 'SIGNED_IN' && session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            full_name: session.user.user_metadata?.full_name,
-            avatar_url: session.user.user_metadata?.avatar_url,
-            created_at: session.user.created_at,
-            updated_at: session.user.updated_at || session.user.created_at,
-          })
+          const userData = {
+            id: session.user.id || '',
+            email: session.user.email || '',
+            full_name: session.user.user_metadata?.full_name || null,
+            avatar_url: session.user.user_metadata?.avatar_url || null,
+            created_at: session.user.created_at || new Date().toISOString(),
+            updated_at: session.user.updated_at || session.user.created_at || new Date().toISOString(),
+          }
+          setUser(userData)
           router.push('/dashboard')
         } else if (event === 'SIGNED_OUT') {
           setUser(null)

@@ -369,7 +369,7 @@ auth.post('/resend-confirmation', async (c) => {
         type: 'signup',
         email: email,
         options: {
-          emailRedirectTo: 'https://bankstatementretriever.vercel.app/auth/callback'
+          emailRedirectTo: 'https://app.bankstatementretriever.com/auth/callback'
         }
       })
     })
@@ -413,7 +413,7 @@ auth.post('/resend-simple', async (c) => {
       success: true,
       message: 'If an account with this email exists, a confirmation email has been sent.',
       email: email,
-      test_resend_url: `https://yoodxepoxrxzfstfgwst.supabase.co/auth/v1/verify?token=test_token&type=signup&redirect_to=https://bankstatementretriever.vercel.app/auth/callback`
+      test_resend_url: `https://yoodxepoxrxzfstfgwst.supabase.co/auth/v1/verify?token=test_token&type=signup&redirect_to=https://app.bankstatementretriever.com/auth/callback`
     })
     
   } catch (error) {
