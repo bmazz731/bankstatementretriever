@@ -14,6 +14,7 @@ import { healthRouter } from './routes/health'
 import { authRouter } from './routes/auth'
 import { plaidRouter } from './routes/plaid'
 import { storageRouter } from './routes/storage'
+import { accountsRouter } from './routes/accounts'
 
 // Initialize Hono app
 const app = new Hono<{ Bindings: Env }>()
@@ -42,6 +43,7 @@ app.use('*', secureHeaders({
 // Routes
 app.route('/health', healthRouter)
 app.route('/api/auth', authRouter)
+app.route('/api/accounts', accountsRouter)
 app.route('/api/plaid', plaidRouter)
 app.route('/api/storage', storageRouter)
 
