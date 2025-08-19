@@ -345,4 +345,81 @@ auth.post('/refresh', async (c) => {
   }
 })
 
+// Resend confirmation email - MVP with real Supabase integration
+auth.post('/resend-confirmation', async (c) => {
+  try {
+    const { email } = await c.req.json()
+    
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400)
+    }
+    
+    // Use Supabase client to trigger resend
+    const supabaseUrl = c.env.SUPABASE_URL
+    const supabaseAnonKey = c.env.SUPABASE_ANON_KEY
+    
+    const response = await fetch(`${supabaseUrl}/auth/v1/resend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${supabaseAnonKey}`
+      },
+      body: JSON.stringify({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: 'https://bankstatementretriever.vercel.app/auth/callback'
+        }
+      })
+    })
+    
+    const result = await response.text()
+    console.log(`Resend confirmation for ${email}, Response: ${response.status}, Body: ${result}`)
+    
+    if (response.ok) {
+      return c.json({
+        success: true,
+        message: 'Confirmation email sent successfully',
+        email: email
+      })
+    } else {
+      console.error('Supabase resend error:', result)
+      return c.json({
+        success: false,
+        error: 'Failed to send confirmation email',
+        details: result
+      }, response.status)
+    }
+    
+  } catch (error) {
+    console.error('Resend confirmation error:', error)
+    return c.json({ error: 'Failed to resend confirmation email' }, 500)
+  }
+})
+
+// Simple resend endpoint for testing
+auth.post('/resend-simple', async (c) => {
+  try {
+    const { email } = await c.req.json()
+    
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400)
+    }
+    
+    console.log(`Resend confirmation requested for: ${email}`)
+    
+    return c.json({
+      success: true,
+      message: 'If an account with this email exists, a confirmation email has been sent.',
+      email: email,
+      test_resend_url: `https://yoodxepoxrxzfstfgwst.supabase.co/auth/v1/verify?token=test_token&type=signup&redirect_to=https://bankstatementretriever.vercel.app/auth/callback`
+    })
+    
+  } catch (error) {
+    console.error('Simple resend error:', error)
+    return c.json({ error: 'Failed to resend confirmation email' }, 500)
+  }
+})
+
 export { auth as authRouter }
