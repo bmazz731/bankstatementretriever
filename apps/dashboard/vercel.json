@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "installCommand": "npm install --include=dev",
+  "installCommand": "npm install --no-workspaces --include=dev",
   "framework": "nextjs",
   "regions": ["iad1"],
   "functions": {
