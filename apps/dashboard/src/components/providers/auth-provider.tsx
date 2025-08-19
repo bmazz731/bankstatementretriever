@@ -6,15 +6,12 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setLoading, hasHydrated } = useAuthStore()
+  const { setUser, setLoading, setInitialized } = useAuthStore()
   const router = useRouter()
   const supabase = createSupabaseClient()
 
   useEffect(() => {
-    // Only run auth check after hydration
-    if (!hasHydrated) return
-
-    // Get initial session
+    // Get initial session immediately on client
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -35,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
       } finally {
         setLoading(false)
+        setInitialized(true)
       }
     }
 
@@ -63,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [setUser, setLoading, router, supabase.auth, hasHydrated])
+  }, [setUser, setLoading, setInitialized, router, supabase.auth])
 
   return <>{children}</>
 }
