@@ -46,17 +46,6 @@ export function getStatusColor(status: string) {
   }
 }
 
-export function getStatusIcon(status: string) {
-  const color = getStatusColor(status)
-  return (
-    <div className={`w-2 h-2 rounded-full ${
-      color === "green" ? "bg-green-500" :
-      color === "yellow" ? "bg-yellow-500" :
-      color === "red" ? "bg-red-500" :
-      "bg-gray-500"
-    }`} />
-  )
-}
 
 export function truncateText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text
