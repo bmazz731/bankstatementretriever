@@ -1,0 +1,181 @@
+# Cloudflare Configuration for BankStatementRetriever
+# Apply via Terraform or Cloudflare Dashboard
+
+zone_settings:
+  zone_name: "bankstatementretriever.com"
+  settings:
+    ssl: "strict"
+    always_use_https: true
+    min_tls_version: "1.2"
+    tls_1_3: "on"
+    automatic_https_rewrites: true
+    security_level: "medium"
+    browser_integrity_check: true
+    challenge_ttl: 1800
+    development_mode: false
+    rocket_loader: false
+    minify:
+      css: true
+      js: true
+      html: true
+    brotli: true
+
+# DNS Records
+dns_records:
+  # Root domain
+  - name: "@"
+    type: "A"
+    content: "76.76.19.19"  # Vercel
+    proxied: true
+    
+  # WWW redirect
+  - name: "www"
+    type: "CNAME" 
+    content: "bankstatementretriever.com"
+    proxied: true
+    
+  # App subdomain (Dashboard)
+  - name: "app"
+    type: "CNAME"
+    content: "cname.vercel-dns.com"
+    proxied: true
+    
+  # API subdomain (Workers)
+  - name: "api"
+    type: "AAAA"
+    content: "100::"  # Cloudflare Workers
+    proxied: true
+    
+  # Staging environments
+  - name: "app-staging"
+    type: "CNAME"
+    content: "cname.vercel-dns.com"
+    proxied: true
+    
+  - name: "api-staging"
+    type: "AAAA"
+    content: "100::"
+    proxied: true
+
+# Page Rules
+page_rules:
+  # API caching
+  - targets:
+      - url: "api.bankstatementretriever.com/health*"
+    actions:
+      cache_level: "cache_everything"
+      edge_cache_ttl: 300
+      
+  # App security headers
+  - targets:
+      - url: "app.bankstatementretriever.com/*"
+    actions:
+      security_level: "medium"
+      rocket_loader: false
+      
+  # Root domain redirect
+  - targets:
+      - url: "bankstatementretriever.com/*"
+    actions:
+      forwarding_url:
+        url: "https://app.bankstatementretriever.com/$1"
+        status_code: 301
+
+# WAF Rules
+waf_rules:
+  # Rate limiting
+  - name: "api_rate_limit"
+    expression: '(http.host eq "api.bankstatementretriever.com" and http.request.method eq "POST")'
+    action: "challenge"
+    ratelimit:
+      threshold: 100
+      period: 60
+      mitigation_timeout: 600
+      
+  # Block suspicious patterns
+  - name: "block_sql_injection"
+    expression: '(any(http.request.uri.query_string contains "union select" "drop table" "insert into"))'
+    action: "block"
+    
+  # Geographic restrictions (if needed)
+  - name: "geo_restriction"
+    expression: '(ip.geoip.country ne "US" and http.host contains "api")'
+    action: "challenge"
+    enabled: false  # Disabled by default
+
+# Turnstile (CAPTCHA)
+turnstile:
+  - domain: "app.bankstatementretriever.com"
+    widget_mode: "non-interactive"
+    theme: "light"
+    # Site key and secret key to be set in dashboard
+
+# Workers Routes
+workers_routes:
+  - pattern: "api.bankstatementretriever.com/*"
+    script: "bankstatementretriever-api"
+    
+  - pattern: "api-staging.bankstatementretriever.com/*"  
+    script: "bankstatementretriever-api-staging"
+
+# Logpush Configuration
+logpush:
+  enabled: true
+  destination: "https://webhook.site/logpush-endpoint"  # Replace with actual endpoint
+  dataset: "http_requests"
+  fields:
+    - "ClientIP"
+    - "ClientRequestHost"
+    - "ClientRequestMethod"
+    - "ClientRequestURI"
+    - "EdgeResponseStatus"
+    - "EdgeStartTimestamp"
+    - "EdgeEndTimestamp"
+    - "EdgeResponseBytes"
+    - "RayID"
+    - "UserAgent"
+  filter: '(ClientRequestHost eq "api.bankstatementretriever.com")'
+
+# Cache Rules
+cache_rules:
+  # API responses with short TTL
+  - name: "api_health_cache"
+    expression: '(http.host eq "api.bankstatementretriever.com" and starts_with(http.request.uri.path, "/health"))'
+    action: "cache"
+    cache_key:
+      ignore_query_strings: false
+    edge_ttl: 300
+    browser_ttl: 60
+    
+  # Static assets
+  - name: "static_assets_cache"
+    expression: '(http.request.uri.path_extension in {"css" "js" "png" "jpg" "jpeg" "gif" "svg" "ico" "woff" "woff2"})'
+    action: "cache"
+    edge_ttl: 86400
+    browser_ttl: 86400
+
+# Origin Rules
+origin_rules:
+  # Custom headers for API
+  - name: "api_origin_headers"
+    expression: '(http.host eq "api.bankstatementretriever.com")'
+    action: "set_request_header"
+    parameters:
+      headers:
+        "CF-Connecting-IP": "${cf.connecting_ip}"
+        "CF-Ray": "${cf.ray_id}"
+        "CF-Country": "${cf.country}"
+
+# Transform Rules  
+transform_rules:
+  # Security headers for app
+  - name: "app_security_headers"
+    expression: '(http.host eq "app.bankstatementretriever.com")'
+    action: "set_response_header"
+    parameters:
+      headers:
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
+        "X-Frame-Options": "DENY"
+        "X-Content-Type-Options": "nosniff"
+        "Referrer-Policy": "strict-origin-when-cross-origin"
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"

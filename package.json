@@ -1,27 +1,44 @@
 {
   "name": "bankstatementretriever",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "Automated bank statement retrieval and delivery service",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:migrate": "cd packages/database && npm run migrate",
+    "db:push": "cd packages/database && npm run push",
+    "deploy:dashboard": "cd apps/dashboard && vercel --prod",
+    "deploy:workers": "cd apps/workers && wrangler deploy"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bmazz731/bankstatementretriever.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": ["bank", "statements", "automation", "plaid", "saas"],
+  "author": "Brandon Mazzella",
+  "license": "UNLICENSED",
   "bugs": {
     "url": "https://github.com/bmazz731/bankstatementretriever/issues"
   },
   "homepage": "https://github.com/bmazz731/bankstatementretriever#readme",
   "devDependencies": {
-    "@types/node": "^24.3.0",
+    "@types/node": "^20.11.0",
     "eslint": "^9.33.0",
     "prettier": "^3.6.2",
+    "turbo": "^1.11.0",
     "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

@@ -1,0 +1,271 @@
+// BankStatementRetriever Database Schema
+// Based on PRD Section 7: Data Model (Key Entities)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// Organization - Single owner per account (MVP)
+model Organization {
+  id             String    @id @default(uuid()) @db.Uuid
+  owner_user_id  String    @db.Uuid
+  plan           String    @default("free") // free, business, professional, agency, enterprise
+  status         String    @default("active") // active, paused, cancelled
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  updated_at     DateTime  @updatedAt @db.Timestamptz
+  deleted_at     DateTime? @db.Timestamptz
+
+  // Relations
+  owner       User         @relation("OrganizationOwner", fields: [owner_user_id], references: [id])
+  users       User[]       @relation("OrganizationMembers")
+  connections Connection[]
+  destinations Destination[]
+  webhook_endpoints WebhookEndpoint[]
+  oauth_tokens OAuthToken[]
+  audit_logs  AuditLog[]
+  backfill_jobs BackfillJob[]
+
+  @@map("organizations")
+}
+
+// User - Auth handled by Supabase, this tracks org membership
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  org_id         String    @db.Uuid
+  email          String    @unique
+  password_hash  String?   // Nullable for SSO users
+  oidc_provider  String?   // google, etc.
+  mfa_enabled    Boolean   @default(false)
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  updated_at     DateTime  @updatedAt @db.Timestamptz
+
+  // Relations  
+  organization     Organization  @relation("OrganizationMembers", fields: [org_id], references: [id])
+  owned_orgs       Organization[] @relation("OrganizationOwner")
+  oauth_tokens     OAuthToken[]
+  audit_logs       AuditLog[]
+
+  @@map("users")
+}
+
+// Connection - Plaid Item representing bank institution connection
+model Connection {
+  id               String    @id @default(uuid()) @db.Uuid
+  org_id           String    @db.Uuid
+  plaid_item_id    String    @unique
+  institution      String    // Institution name
+  status           String    @default("active") // active, paused, error, reauth_required
+  last_reauth_at   DateTime? @db.Timestamptz
+  created_at       DateTime  @default(now()) @db.Timestamptz
+  updated_at       DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [org_id], references: [id])
+  accounts     Account[]
+
+  @@map("connections")
+}
+
+// Account - Individual bank account within a connection
+model Account {
+  id                     String    @id @default(uuid()) @db.Uuid
+  connection_id          String    @db.Uuid
+  plaid_account_id       String    @unique
+  account_last4          String
+  account_name           String
+  type                   String    // checking, savings, credit_card, loan
+  statements_supported   Boolean   @default(false)
+  learned_schedule_json  Json?     // Stored pattern for statement availability
+  status                 String    @default("active") // active, paused, not_supported
+  created_at             DateTime  @default(now()) @db.Timestamptz
+  updated_at             DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  connection            Connection           @relation(fields: [connection_id], references: [id])
+  statements            Statement[]
+  routing_rules         RoutingRule[]
+  notification_preferences NotificationPreference[]
+  backfill_jobs         BackfillJob[]
+
+  @@map("accounts")
+}
+
+// Statement - Ledger of retrieved statements with deduplication
+model Statement {
+  id             String    @id @default(uuid()) @db.Uuid
+  account_id     String    @db.Uuid
+  period_start   DateTime  @db.Date
+  period_end     DateTime  @db.Date
+  statement_date DateTime  @db.Date
+  file_type      String    // pdf, csv
+  checksum       String
+  version        Int       @default(1) // For duplicate versioning
+  retrieved_at   DateTime  @default(now()) @db.Timestamptz
+  created_at     DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  account    Account    @relation(fields: [account_id], references: [id])
+  deliveries Delivery[]
+
+  // Unique constraint for deduplication
+  @@unique([account_id, period_end, file_type, version])
+  @@map("statements")
+}
+
+// Destination - Storage providers and webhook endpoints
+model Destination {
+  id          String    @id @default(uuid()) @db.Uuid
+  org_id      String    @db.Uuid
+  kind        String    // google_drive, dropbox, onedrive, webhook
+  name        String    // User-friendly name
+  config_json Json      // Provider-specific configuration
+  secret_ref  String?   // Reference to encrypted secrets
+  active      Boolean   @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  organization  Organization  @relation(fields: [org_id], references: [id])
+  routing_rules RoutingRule[]
+  deliveries    Delivery[]
+
+  @@map("destinations")
+}
+
+// RoutingRule - Maps accounts to destinations with folder/filename patterns
+model RoutingRule {
+  id               String  @id @default(uuid()) @db.Uuid
+  account_id       String  @db.Uuid
+  destination_id   String  @db.Uuid
+  folder_path      String  @default("") // Path with template variables
+  filename_pattern String  @default("{institution}_{accountLast4}_{periodEnd}_statement.{fileType}")
+  active           Boolean @default(true)
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  account     Account     @relation(fields: [account_id], references: [id])
+  destination Destination @relation(fields: [destination_id], references: [id])
+
+  @@unique([account_id, destination_id])
+  @@map("routing_rules")
+}
+
+// Delivery - Tracks delivery attempts and status per destination
+model Delivery {
+  id           String    @id @default(uuid()) @db.Uuid
+  statement_id String    @db.Uuid
+  destination_id String  @db.Uuid
+  status       String    @default("pending") // pending, succeeded, failed, retrying, paused
+  path         String?   // Final delivery path
+  delivered_at DateTime? @db.Timestamptz
+  attempts     Int       @default(0)
+  last_error   String?
+  request_id   String    @unique // For idempotency
+  created_at   DateTime  @default(now()) @db.Timestamptz
+  updated_at   DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  statement   Statement   @relation(fields: [statement_id], references: [id])
+  destination Destination @relation(fields: [destination_id], references: [id])
+
+  @@map("deliveries")
+}
+
+// WebhookEndpoint - Webhook destinations with secrets
+model WebhookEndpoint {
+  id              String    @id @default(uuid()) @db.Uuid
+  org_id          String    @db.Uuid
+  url             String
+  secret_ref      String    // HMAC signing secret
+  active          Boolean   @default(true)
+  last_success_at DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [org_id], references: [id])
+
+  @@map("webhook_endpoints")
+}
+
+// OAuthToken - Encrypted storage provider tokens
+model OAuthToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  org_id       String?   @db.Uuid
+  user_id      String?   @db.Uuid
+  provider     String    // google, dropbox, microsoft
+  scopes       String[]
+  expires_at   DateTime? @db.Timestamptz
+  enc_payload  String    // Encrypted token data
+  created_at   DateTime  @default(now()) @db.Timestamptz
+  updated_at   DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  organization Organization? @relation(fields: [org_id], references: [id])
+  user         User?         @relation(fields: [user_id], references: [id])
+
+  @@map("oauth_tokens")
+}
+
+// AuditLog - Security and compliance logging
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  org_id     String   @db.Uuid
+  user_id    String?  @db.Uuid
+  action     String   // login, connection_added, delivery_failed, etc.
+  target_id  String?  // ID of affected resource
+  meta_json  Json?    // Additional context
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [org_id], references: [id])
+  user         User?        @relation(fields: [user_id], references: [id])
+
+  @@index([org_id, created_at])
+  @@map("audit_logs")
+}
+
+// BackfillJob - Manual historical statement retrieval
+model BackfillJob {
+  id          String    @id @default(uuid()) @db.Uuid
+  org_id      String    @db.Uuid
+  account_id  String    @db.Uuid
+  range_start DateTime  @db.Date
+  range_end   DateTime  @db.Date
+  status      String    @default("pending") // pending, running, completed, failed
+  progress    Json?     // Detailed progress tracking
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [org_id], references: [id])
+  account      Account      @relation(fields: [account_id], references: [id])
+
+  @@map("backfill_jobs")
+}
+
+// NotificationPreference - Per-account notification settings
+model NotificationPreference {
+  id         String   @id @default(uuid()) @db.Uuid
+  account_id String   @db.Uuid
+  channel    String   // email, webhook
+  event_type String   // statement_delivered, delivery_failed, reauth_required, monthly_summary
+  enabled    Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  account Account @relation(fields: [account_id], references: [id])
+
+  // Unique constraint per PRD requirements
+  @@unique([account_id, channel, event_type])
+  @@map("notification_preferences")
+}

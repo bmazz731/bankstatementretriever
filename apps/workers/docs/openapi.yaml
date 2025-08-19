@@ -1,0 +1,733 @@
+openapi: 3.0.3
+info:
+  title: BankStatementRetriever API
+  description: Internal API for automated bank statement retrieval and delivery service
+  version: 0.1.0
+  contact:
+    name: BSR Support
+    email: support@bankstatementretriever.com
+  license:
+    name: Proprietary
+    url: https://bankstatementretriever.com/terms
+
+servers:
+  - url: https://api.bankstatementretriever.com
+    description: Production API
+  - url: https://api-staging.bankstatementretriever.com
+    description: Staging API
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Health Endpoints
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Lightweight health endpoint for load balancer
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/deep:
+    get:
+      tags:
+        - Health
+      summary: Deep health check
+      description: Comprehensive health check including database, queues, and external services
+      responses:
+        '200':
+          description: All systems healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeepHealthResponse'
+        '503':
+          description: Some systems degraded
+
+  # Account Management
+  /api/accounts:
+    get:
+      tags:
+        - Accounts
+      summary: List accounts
+      description: List accounts for current organization with optional filtering
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, inactive]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountsResponse'
+
+  /api/accounts/{id}:
+    delete:
+      tags:
+        - Accounts
+      summary: Deactivate account
+      description: Soft-delete or inactivate account (preserve history)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Account deactivated successfully
+        '404':
+          description: Account not found
+
+  /api/accounts/{id}/sync:
+    post:
+      tags:
+        - Accounts
+      summary: Manual sync
+      description: Queue immediate statement retrieval attempt for account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sync job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+
+  /api/accounts/{id}/backfill:
+    post:
+      tags:
+        - Accounts
+      summary: Backfill statements
+      description: Queue historical statement retrieval for specified date range
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackfillRequest'
+      responses:
+        '200':
+          description: Backfill job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackfillResponse'
+
+  # Statement History
+  /api/statements/{accountId}:
+    get:
+      tags:
+        - Statements
+      summary: Get statement history
+      description: Paginated statement history for an account with optional filtering
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: file_type
+          in: query
+          schema:
+            type: string
+            enum: [pdf, csv]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Statements retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementsResponse'
+
+  # Destinations Management
+  /api/destinations:
+    get:
+      tags:
+        - Destinations
+      summary: List destinations
+      description: Get all active storage/webhook destinations
+      responses:
+        '200':
+          description: Destinations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DestinationsResponse'
+    
+    post:
+      tags:
+        - Destinations
+      summary: Create destination
+      description: Create a new storage or webhook destination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDestinationRequest'
+      responses:
+        '201':
+          description: Destination created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDestinationResponse'
+
+  /api/destinations/{id}/test:
+    post:
+      tags:
+        - Destinations
+      summary: Test webhook destination
+      description: Test connectivity and authentication for webhook destinations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Webhook test completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookTestResponse'
+        '404':
+          description: Webhook destination not found
+
+  # Routes Management
+  /api/routes:
+    post:
+      tags:
+        - Routes
+      summary: Create route
+      description: Map account to destination with folder and filename settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteRequest'
+      responses:
+        '201':
+          description: Route created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRouteResponse'
+
+  # Notification Preferences
+  /api/notifications/preferences/{accountId}:
+    put:
+      tags:
+        - Notifications
+      summary: Update notification preferences
+      description: Upsert per-account notification preferences
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferencesRequest'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferencesResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Common schemas
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: BSR error code (BSR_VALIDATION_ERROR, BSR_AUTH_ERROR, etc.)
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+        request_id:
+          type: string
+          format: uuid
+          description: Request ID for debugging
+
+    PaginatedResponse:
+      type: object
+      required:
+        - page
+        - page_size
+        - total
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+    # Health schemas
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+        version:
+          type: string
+        environment:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: integer
+        build:
+          type: string
+
+    DeepHealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - response_time_ms
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+        timestamp:
+          type: string
+          format: date-time
+        response_time_ms:
+          type: integer
+        checks:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/HealthCheck'
+            kv_config:
+              $ref: '#/components/schemas/HealthCheck'
+            kv_cache:
+              $ref: '#/components/schemas/HealthCheck'
+            queues:
+              $ref: '#/components/schemas/HealthCheck'
+            plaid:
+              $ref: '#/components/schemas/HealthCheck'
+
+    HealthCheck:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        latency:
+          type: integer
+        error:
+          type: string
+
+    # Account schemas
+    Account:
+      type: object
+      required:
+        - account_id
+        - connection_id
+        - institution
+        - account_name
+        - type
+        - status
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        connection_id:
+          type: string
+          format: uuid
+        institution:
+          type: string
+        account_name:
+          type: string
+        account_last4:
+          type: string
+        type:
+          type: string
+        statements_supported:
+          type: boolean
+        status:
+          type: string
+          enum: [active, paused, inactive]
+
+    AccountsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          required:
+            - accounts
+          properties:
+            accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/Account'
+
+    SyncResponse:
+      type: object
+      required:
+        - message
+        - request_id
+      properties:
+        message:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+
+    BackfillRequest:
+      type: object
+      required:
+        - range_start
+        - range_end
+      properties:
+        range_start:
+          type: string
+          format: date
+          description: Start date in YYYY-MM-DD format
+        range_end:
+          type: string
+          format: date
+          description: End date in YYYY-MM-DD format (max 12 months from start)
+
+    BackfillResponse:
+      type: object
+      required:
+        - success
+        - request_id
+        - message
+        - range
+      properties:
+        success:
+          type: boolean
+        request_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    # Statement schemas
+    Statement:
+      type: object
+      required:
+        - statement_id
+        - period_start
+        - period_end
+        - statement_date
+        - file_type
+        - delivered
+      properties:
+        statement_id:
+          type: string
+          format: uuid
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        statement_date:
+          type: string
+          format: date
+        file_type:
+          type: string
+          enum: [pdf, csv]
+        version:
+          type: integer
+        checksum:
+          type: string
+        delivered:
+          type: boolean
+
+    StatementsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          required:
+            - statements
+          properties:
+            statements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Statement'
+
+    # Destination schemas
+    Destination:
+      type: object
+      required:
+        - id
+        - type
+        - name
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [google_drive, dropbox, onedrive, webhook]
+        name:
+          type: string
+        folder_path:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        created_at:
+          type: string
+          format: date-time
+
+    DestinationsResponse:
+      type: object
+      required:
+        - destinations
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Destination'
+
+    CreateDestinationRequest:
+      type: object
+      required:
+        - type
+        - name
+        - config
+      properties:
+        type:
+          type: string
+          enum: [google_drive, dropbox, onedrive, webhook]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        config:
+          type: object
+          description: Provider-specific configuration
+        folder_path:
+          type: string
+          maxLength: 500
+          default: "/"
+
+    CreateDestinationResponse:
+      type: object
+      required:
+        - success
+        - destination
+        - message
+      properties:
+        success:
+          type: boolean
+        destination:
+          $ref: '#/components/schemas/Destination'
+        message:
+          type: string
+
+    # Route schemas
+    CreateRouteRequest:
+      type: object
+      required:
+        - account_id
+        - destination_id
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        destination_id:
+          type: string
+          format: uuid
+        folder_override:
+          type: string
+          maxLength: 500
+        filename_template:
+          type: string
+          maxLength: 200
+          default: "{institution}_{account_name}_{statement_date}.pdf"
+
+    CreateRouteResponse:
+      type: object
+      required:
+        - success
+        - route
+        - message
+      properties:
+        success:
+          type: boolean
+        route:
+          type: object
+        message:
+          type: string
+
+    # Notification schemas
+    NotificationPreference:
+      type: object
+      required:
+        - channel
+        - event_type
+        - enabled
+      properties:
+        channel:
+          type: string
+          enum: [email, webhook]
+        event_type:
+          type: string
+          enum: [statement_delivered, statement_failed, reauth_required, monthly_summary]
+        enabled:
+          type: boolean
+
+    NotificationPreferencesRequest:
+      type: object
+      required:
+        - preferences
+      properties:
+        preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationPreference'
+
+    NotificationPreferencesResponse:
+      type: object
+      required:
+        - updated
+        - preferences
+        - message
+      properties:
+        updated:
+          type: boolean
+        preferences:
+          type: integer
+          description: Number of preferences updated
+        message:
+          type: string
+
+    # Webhook schemas
+    WebhookTestResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        response_time_ms:
+          type: integer
+          description: Response time in milliseconds
+        error:
+          type: string
+          description: Error message if test failed
+        message:
+          type: string

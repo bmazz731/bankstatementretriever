@@ -1,0 +1,32 @@
+{
+  "name": "@bsr/auth",
+  "version": "0.1.0",
+  "description": "Authentication system for BankStatementRetriever",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bsr/database": "*",
+    "@supabase/supabase-js": "^2.39.0",
+    "jose": "^5.2.0",
+    "zxcvbn": "^4.4.2",
+    "bcrypt": "^5.1.1",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20.11.0",
+    "@types/zxcvbn": "^4.4.4",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "keywords": ["authentication", "auth", "supabase", "jwt"],
+  "author": "Brandon Mazzella",
+  "license": "UNLICENSED"
+}
