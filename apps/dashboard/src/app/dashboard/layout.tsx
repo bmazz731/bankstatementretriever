@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth'
+import { createSupabaseClient } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { ClientOnly } from '@/components/client-only'
 
 // Simple loading screen with no dynamic content
 function LoadingScreen() {
@@ -31,31 +33,79 @@ function LoadingScreen() {
   )
 }
 
-// Minimal dashboard layout to test React Error #130
-function MinimalDashboard({ children }: { children: React.ReactNode }) {
+// Production dashboard layout - safe from hydration issues
+function ProductionDashboard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore()
+  
+  const handleSignOut = async () => {
+    try {
+      const supabase = createSupabaseClient()
+      await supabase.auth.signOut()
+      window.location.href = '/auth/signin'
+    } catch (error) {
+      console.error('Sign out error:', error)
+      window.location.href = '/auth/signin'
+    }
+  }
+
+  // Safe user display with fallback
+  const displayName = user?.full_name || user?.email || 'User'
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#f8fafc',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
       <header style={{ 
-        borderBottom: '1px solid #ccc', 
-        paddingBottom: '10px', 
-        marginBottom: '20px' 
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0 20px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
       }}>
-        <h1>BSR Dashboard</h1>
-        <button 
-          onClick={() => window.location.href = '/auth/signin'}
-          style={{
-            padding: '5px 10px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Sign Out
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h1 style={{ 
+            margin: '0', 
+            fontSize: '20px', 
+            fontWeight: '600',
+            color: '#111827'
+          }}>
+            BankStatementRetriever
+          </h1>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <ClientOnly fallback={
+            <span style={{ fontSize: '14px', color: '#6b7280' }}>Welcome</span>
+          }>
+            <span style={{ fontSize: '14px', color: '#6b7280' }}>
+              Welcome, <span style={{ fontWeight: '500', color: '#111827' }}>{displayName}</span>
+            </span>
+          </ClientOnly>
+          
+          <button 
+            onClick={handleSignOut}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </header>
-      <main>
+      
+      <main style={{ padding: '0' }}>
         {children}
       </main>
     </div>
@@ -112,10 +162,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     return <LoadingScreen />
   }
 
-  // Use minimal dashboard to avoid any complex component issues
+  // Use production dashboard with safe hydration
   return (
     <ErrorBoundary>
-      <MinimalDashboard>{children}</MinimalDashboard>
+      <ProductionDashboard>{children}</ProductionDashboard>
     </ErrorBoundary>
   )
 }
