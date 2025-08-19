@@ -1,9 +1,25 @@
--- BankStatementRetriever Database Schema
--- Manual migration for Supabase
--- Run this in the Supabase SQL Editor
+-- BankStatementRetriever Phase 1 Database Migration
+-- Execute this script in your Supabase SQL Editor
+-- Version: Phase 1 - Plaid Integration
+-- Date: 2025-08-19
 
--- Enable UUID extension
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Drop existing tables if they exist (for clean deployment)
+DROP TABLE IF EXISTS notification_preferences CASCADE;
+DROP TABLE IF EXISTS backfill_jobs CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS oauth_tokens CASCADE;
+DROP TABLE IF EXISTS webhook_endpoints CASCADE;
+DROP TABLE IF EXISTS deliveries CASCADE;
+DROP TABLE IF EXISTS routing_rules CASCADE;
+DROP TABLE IF EXISTS destinations CASCADE;
+DROP TABLE IF EXISTS statements CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS connections CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
 
 -- Organizations table
 CREATE TABLE organizations (
@@ -28,7 +44,7 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Connections table
+-- Connections table (Enhanced for Plaid)
 CREATE TABLE connections (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL,
@@ -41,7 +57,7 @@ CREATE TABLE connections (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Accounts table
+-- Accounts table (Enhanced for Plaid)
 CREATE TABLE accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   connection_id UUID NOT NULL,
@@ -57,7 +73,7 @@ CREATE TABLE accounts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Statements table
+-- Statements table (Enhanced for Plaid)
 CREATE TABLE statements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   account_id UUID NOT NULL,
@@ -173,11 +189,11 @@ CREATE TABLE notification_preferences (
 );
 
 -- Add Foreign Key Constraints
-ALTER TABLE organizations ADD CONSTRAINT organizations_owner_user_id_fkey 
-  FOREIGN KEY (owner_user_id) REFERENCES users(id);
-
 ALTER TABLE users ADD CONSTRAINT users_org_id_fkey 
   FOREIGN KEY (org_id) REFERENCES organizations(id);
+
+ALTER TABLE organizations ADD CONSTRAINT organizations_owner_user_id_fkey 
+  FOREIGN KEY (owner_user_id) REFERENCES users(id) DEFERRABLE INITIALLY DEFERRED;
 
 ALTER TABLE connections ADD CONSTRAINT connections_org_id_fkey 
   FOREIGN KEY (org_id) REFERENCES organizations(id);
@@ -246,6 +262,8 @@ CREATE INDEX idx_statements_account_date ON statements(account_id, statement_dat
 CREATE INDEX idx_deliveries_status ON deliveries(status) WHERE status IN ('pending', 'retrying');
 CREATE INDEX idx_accounts_connection ON accounts(connection_id);
 CREATE INDEX idx_connections_org ON connections(org_id);
+CREATE INDEX idx_connections_plaid_item ON connections(plaid_item_id);
+CREATE INDEX idx_accounts_plaid_account ON accounts(plaid_account_id);
 
 -- Add updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -304,13 +322,11 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE backfill_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
--- Add basic RLS policies (allow authenticated users to see their own org's data)
+-- Basic RLS policies (you may need to adjust based on your auth setup)
 CREATE POLICY "Users can access their own organization data" ON organizations
   FOR ALL USING (auth.uid()::text IN (
     SELECT u.id::text FROM users u WHERE u.org_id = organizations.id
   ));
 
--- Note: Additional RLS policies should be added based on specific access patterns
--- This is a basic setup to get started
-
-COMMIT;
+-- Migration complete
+SELECT 'Database migration completed successfully!' as result;

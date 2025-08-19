@@ -141,10 +141,13 @@ class ApiClient {
     return this.request('/api/plaid/link_token', { method: 'POST' })
   }
 
-  async exchangePublicToken(publicToken: string) {
+  async exchangePublicToken(publicToken: string, backfillMonths: number = 1) {
     return this.request('/api/plaid/exchange_public_token', {
       method: 'POST',
-      body: JSON.stringify({ public_token: publicToken }),
+      body: JSON.stringify({ 
+        public_token: publicToken,
+        backfill_months: backfillMonths
+      }),
     })
   }
 

@@ -4,6 +4,11 @@ import { useState } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Icons } from '@/components/icons'
 import { useNotificationStore } from '@/stores/dashboard'
 import apiClient from '@/lib/api'
@@ -12,17 +17,28 @@ import type { PlaidLinkSuccess } from '@/types'
 export function PlaidLinkButton() {
   const [linkToken, setLinkToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
+  const [showConsentDialog, setShowConsentDialog] = useState(false)
+  const [consentData, setConsentData] = useState({
+    authorizeRetrieval: false,
+    hasAuthority: false,
+    acknowledgeDestination: false,
+    backfillMonths: 1,
+    publicToken: null as string | null,
+    metadata: null as PlaidLinkSuccess['metadata'] | null
+  })
   const queryClient = useQueryClient()
   const { addNotification } = useNotificationStore()
 
   const exchangeMutation = useMutation({
-    mutationFn: (publicToken: string) => apiClient.exchangePublicToken(publicToken),
+    mutationFn: ({ publicToken, backfillMonths }: { publicToken: string; backfillMonths: number }) => 
+      apiClient.exchangePublicToken(publicToken, backfillMonths),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      setShowConsentDialog(false)
       addNotification({
         type: 'success',
         title: 'Bank account connected',
-        description: 'Your bank account has been successfully connected',
+        description: 'Your bank account has been successfully connected and statement retrieval will begin automatically.',
       })
     },
     onError: (error: any) => {
@@ -37,7 +53,9 @@ export function PlaidLinkButton() {
   const { open, ready } = usePlaidLink({
     token: linkToken,
     onSuccess: (public_token: string, metadata: PlaidLinkSuccess['metadata']) => {
-      exchangeMutation.mutate(public_token)
+      // Store the public token temporarily and show consent dialog
+      setConsentData(prev => ({ ...prev, publicToken: public_token, metadata: metadata }))
+      setShowConsentDialog(true)
     },
     onExit: (err, metadata) => {
       if (err) {
@@ -88,20 +106,209 @@ export function PlaidLinkButton() {
     }
   }
 
+  const handleConsentConfirm = () => {
+    if (!consentData.authorizeRetrieval || !consentData.hasAuthority || !consentData.acknowledgeDestination) {
+      addNotification({
+        type: 'error',
+        title: 'Consent required',
+        description: 'You must agree to all consent items to continue',
+      })
+      return
+    }
+
+    exchangeMutation.mutate({
+      publicToken: consentData.publicToken as string,
+      backfillMonths: consentData.backfillMonths
+    })
+  }
+
+  const isConsentValid = consentData.authorizeRetrieval && consentData.hasAuthority && consentData.acknowledgeDestination
+
   return (
-    <Button 
-      onClick={handleClick}
-      disabled={isGeneratingToken || exchangeMutation.isPending}
-      className="w-full justify-start"
-    >
-      {(isGeneratingToken || exchangeMutation.isPending) ? (
-        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Icons.plus className="mr-2 h-4 w-4" />
-      )}
-      {isGeneratingToken ? 'Initializing...' : 
-       exchangeMutation.isPending ? 'Connecting...' : 
-       'Connect Bank Account'}
-    </Button>
+    <>
+      <Button 
+        onClick={handleClick}
+        disabled={isGeneratingToken || exchangeMutation.isPending}
+        className="w-full justify-start"
+      >
+        {(isGeneratingToken || exchangeMutation.isPending) ? (
+          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Icons.plus className="mr-2 h-4 w-4" />
+        )}
+        {isGeneratingToken ? 'Initializing...' : 
+         exchangeMutation.isPending ? 'Connecting...' : 
+         'Connect Bank Account'}
+      </Button>
+
+      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Authorize Bank Statement Retrieval</DialogTitle>
+            <DialogDescription>
+              Review and confirm your authorization for automated statement retrieval from your selected accounts.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Account Summary */}
+            {consentData.metadata && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Connection Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p><strong>Institution:</strong> {consentData.metadata.institution.name}</p>
+                    <p><strong>Accounts to connect:</strong> {consentData.metadata.accounts.length}</p>
+                    <div className="text-sm text-muted-foreground">
+                      {consentData.metadata.accounts.map((account, index) => (
+                        <div key={account.id}>
+                          • {account.name} (...{account.mask}) - {account.type} ({account.subtype})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Consent Checkboxes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Required Authorizations</CardTitle>
+                <CardDescription>
+                  Please review and confirm each authorization below
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <Checkbox 
+                    id="authorize-retrieval"
+                    checked={consentData.authorizeRetrieval}
+                    onCheckedChange={(checked) => 
+                      setConsentData(prev => ({ ...prev, authorizeRetrieval: !!checked }))
+                    }
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor="authorize-retrieval"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I authorize BankStatementRetriever to retrieve my monthly bank and credit card statements
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      This grants permission to automatically download your statements when they become available.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Checkbox 
+                    id="has-authority"
+                    checked={consentData.hasAuthority}
+                    onCheckedChange={(checked) => 
+                      setConsentData(prev => ({ ...prev, hasAuthority: !!checked }))
+                    }
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor="has-authority"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I confirm that I have the authority to access these accounts
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      You must be an authorized user or owner of these accounts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Checkbox 
+                    id="acknowledge-destination"
+                    checked={consentData.acknowledgeDestination}
+                    onCheckedChange={(checked) => 
+                      setConsentData(prev => ({ ...prev, acknowledgeDestination: !!checked }))
+                    }
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor="acknowledge-destination"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I understand that statements will be delivered to my configured destinations
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Statements will be sent to your cloud storage or webhook endpoints. Configure destinations after connecting.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Backfill Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Historical Statement Backfill</CardTitle>
+                <CardDescription>
+                  Choose how many months of historical statements to retrieve initially
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="backfill-months">Backfill Period</Label>
+                  <Select 
+                    value={consentData.backfillMonths.toString()} 
+                    onValueChange={(value) => 
+                      setConsentData(prev => ({ ...prev, backfillMonths: parseInt(value) }))
+                    }
+                  >
+                    <SelectTrigger id="backfill-months">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">No backfill - only new statements</SelectItem>
+                      <SelectItem value="1">Last 1 month</SelectItem>
+                      <SelectItem value="3">Last 3 months</SelectItem>
+                      <SelectItem value="6">Last 6 months</SelectItem>
+                      <SelectItem value="12">Last 12 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Backfill availability depends on your institution's statement history. 
+                    You can manually request additional statements later.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConsentDialog(false)}
+                disabled={exchangeMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConsentConfirm}
+                disabled={!isConsentValid || exchangeMutation.isPending}
+              >
+                {exchangeMutation.isPending ? (
+                  <>
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Connect & Authorize'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

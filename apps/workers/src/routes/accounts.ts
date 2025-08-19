@@ -1,269 +1,205 @@
 /**
- * Accounts API routes for Cloudflare Workers - MVP Implementation
+ * Accounts API routes for Cloudflare Workers - Production Implementation
  */
 import { Hono } from 'hono'
+import { createClient } from '@supabase/supabase-js'
+import { requestId, apiLogger, errorHandler, extractUserContext } from '../middleware/api'
 import type { Env } from '../types/env'
 
-// Mock account data that matches frontend expectations
-const mockAccounts = [
-  {
-    id: "acc_1",
-    user_id: "user_123",
-    plaid_account_id: "plaid_acc_1",
-    name: "Chase Checking",
-    official_name: "Chase Total Checking",
-    type: "depository",
-    subtype: "checking",
-    mask: "1234",
-    status: "active",
-    sync_status: "synced",
-    last_sync: "2024-08-19T18:00:00.000Z",
-    created_at: "2024-08-01T10:00:00.000Z",
-    updated_at: "2024-08-19T18:00:00.000Z",
-    connection: {
-      id: "conn_1",
-      institution_id: "ins_109508",
-      institution_name: "Chase",
-      status: "active",
-      last_sync: "2024-08-19T18:00:00.000Z"
-    },
-    balance: {
-      available: 2547.83,
-      current: 2547.83,
-      iso_currency_code: "USD"
-    },
-    statements: {
-      total: 12,
-      latest: "2024-08-01",
-      oldest: "2024-01-01"
+// Helper functions
+const createSupabaseClient = (env: Env) => {
+  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
     }
-  },
-  {
-    id: "acc_2", 
-    user_id: "user_123",
-    plaid_account_id: "plaid_acc_2",
-    name: "Wells Fargo Savings",
-    official_name: "Wells Fargo Way2Save Savings",
-    type: "depository",
-    subtype: "savings",
-    mask: "5678",
-    status: "active",
-    sync_status: "pending",
-    last_sync: "2024-08-18T14:30:00.000Z",
-    created_at: "2024-07-15T09:00:00.000Z", 
-    updated_at: "2024-08-19T12:00:00.000Z",
-    connection: {
-      id: "conn_2",
-      institution_id: "ins_109511",
-      institution_name: "Wells Fargo",
-      status: "active",
-      last_sync: "2024-08-18T14:30:00.000Z"
-    },
-    balance: {
-      available: 12847.92,
-      current: 12847.92,
-      iso_currency_code: "USD"
-    },
-    statements: {
-      total: 8,
-      latest: "2024-08-01",
-      oldest: "2024-03-01"
-    }
-  },
-  {
-    id: "acc_3",
-    user_id: "user_123", 
-    plaid_account_id: "plaid_acc_3",
-    name: "Bank of America Credit Card",
-    official_name: "Bank of America Cash Rewards Credit Card",
-    type: "credit",
-    subtype: "credit card",
-    mask: "9012",
-    status: "active",
-    sync_status: "error",
-    last_sync: "2024-08-17T08:15:00.000Z",
-    created_at: "2024-06-01T11:00:00.000Z",
-    updated_at: "2024-08-17T08:15:00.000Z", 
-    connection: {
-      id: "conn_3",
-      institution_id: "ins_109503",
-      institution_name: "Bank of America",
-      status: "reauth_required",
-      last_sync: "2024-08-17T08:15:00.000Z",
-      error_message: "Account credentials need to be updated"
-    },
-    balance: {
-      available: 3452.17,
-      current: -847.83,
-      iso_currency_code: "USD",
-      limit: 4300.00
-    },
-    statements: {
-      total: 6,
-      latest: "2024-07-01", 
-      oldest: "2024-02-01"
-    }
-  }
-]
-
-// Stub auth functions
-function requireAuth(c: any, next: any) {
-  const authHeader = c.req.header('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return c.json({ error: 'UNAUTHORIZED', message: 'Authentication required' }, 401)
-  }
-  
-  c.set('user', {
-    id: 'user_123',
-    email: 'demo@example.com',
-    org_id: 'org_123'
   })
+}
+
+const getCurrentUser = (c: any) => {
+  const userId = c.get('userId')
+  const userEmail = c.get('userEmail')
+  const orgId = c.get('orgId')
   
-  return next()
+  if (!userId || !userEmail || !orgId) {
+    return null
+  }
+  
+  return {
+    id: userId,
+    email: userEmail,
+    org_id: orgId
+  }
 }
 
 const accounts = new Hono<{ Bindings: Env }>()
 
+// Apply middleware for all routes
+accounts.use('*', requestId)
+accounts.use('*', apiLogger)
+accounts.use('*', errorHandler)
+
 // Get all accounts for authenticated user
-accounts.get('/', requireAuth, async (c) => {
+accounts.get('/', extractUserContext, async (c) => {
   try {
-    const user = c.get('user')
-    const { status, page = 1, page_size = 20 } = c.req.query()
+    const user = getCurrentUser(c)
+    if (!user) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: 'Authentication required'
+      }, 401)
+    }
+
+    const { status, page = '1', page_size = '20' } = c.req.query()
+    const supabase = createSupabaseClient(c.env)
     
-    // Filter accounts by status if provided
-    let filteredAccounts = mockAccounts.filter(acc => acc.user_id === user.id)
+    // Build query for accounts with connections
+    let query = supabase
+      .from('accounts')
+      .select(`
+        id,
+        plaid_account_id,
+        account_last4,
+        account_name,
+        account_type,
+        account_subtype,
+        statements_supported,
+        status,
+        created_at,
+        updated_at,
+        connection:connections(
+          id,
+          plaid_item_id,
+          institution,
+          status,
+          last_reauth_at,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('connections.org_id', user.org_id)
     
-    if (status) {
-      filteredAccounts = filteredAccounts.filter(acc => acc.sync_status === status)
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
     }
     
-    // Simple pagination
-    const startIndex = (parseInt(page as string) - 1) * parseInt(page_size as string)
-    const endIndex = startIndex + parseInt(page_size as string)
-    const paginatedAccounts = filteredAccounts.slice(startIndex, endIndex)
+    // Add pagination
+    const pageNum = parseInt(page)
+    const pageSizeNum = parseInt(page_size)
+    const startIndex = (pageNum - 1) * pageSizeNum
+    
+    query = query.range(startIndex, startIndex + pageSizeNum - 1)
+    
+    const { data: accountsData, error: accountsError } = await query
+    
+    if (accountsError) {
+      console.error('Database accounts error:', accountsError)
+      return c.json({
+        error: 'BSR_DATABASE_ERROR',
+        message: 'Failed to retrieve accounts'
+      }, 500)
+    }
+
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('accounts')
+      .select('id', { count: 'exact', head: true })
+      .eq('connections.org_id', user.org_id)
+    
+    if (countError) {
+      console.error('Database count error:', countError)
+    }
+
+    // Transform data to match frontend expectations
+    const accounts = (accountsData || []).map(account => ({
+      id: account.id,
+      connection_id: account.connection?.id,
+      plaid_account_id: account.plaid_account_id,
+      name: account.account_name,
+      type: account.account_type,
+      subtype: account.account_subtype,
+      mask: account.account_last4,
+      status: account.status,
+      statements_supported: account.statements_supported,
+      created_at: account.created_at,
+      updated_at: account.updated_at,
+      connection: account.connection ? {
+        id: account.connection.id,
+        plaid_item_id: account.connection.plaid_item_id,
+        institution_id: account.connection.institution,
+        institution_name: account.connection.institution, // TODO: Look up actual institution name
+        status: account.connection.status,
+        last_sync: account.connection.updated_at,
+        last_reauth_at: account.connection.last_reauth_at
+      } : null
+    }))
     
     return c.json({
-      accounts: paginatedAccounts,
-      pagination: {
-        page: parseInt(page as string),
-        page_size: parseInt(page_size as string),
-        total_count: filteredAccounts.length,
-        total_pages: Math.ceil(filteredAccounts.length / parseInt(page_size as string))
-      }
+      data: accounts,
+      page: pageNum,
+      page_size: pageSizeNum,
+      total: count || 0
     })
     
   } catch (error) {
     console.error('Get accounts error:', error)
-    return c.json({ error: 'Failed to retrieve accounts' }, 500)
-  }
-})
-
-// Get single account by ID
-accounts.get('/:accountId', requireAuth, async (c) => {
-  try {
-    const accountId = c.req.param('accountId')
-    const user = c.get('user')
-    
-    const account = mockAccounts.find(acc => 
-      acc.id === accountId && acc.user_id === user.id
-    )
-    
-    if (!account) {
-      return c.json({ error: 'Account not found' }, 404)
-    }
-    
-    return c.json({ account })
-    
-  } catch (error) {
-    console.error('Get account error:', error)
-    return c.json({ error: 'Failed to retrieve account' }, 500)
+    return c.json({
+      error: 'BSR_INTERNAL_ERROR',
+      message: 'Failed to retrieve accounts'
+    }, 500)
   }
 })
 
 // Trigger manual sync for account
-accounts.post('/:accountId/sync', requireAuth, async (c) => {
+accounts.post('/:accountId/sync', extractUserContext, async (c) => {
   try {
     const accountId = c.req.param('accountId')
-    const user = c.get('user')
+    const user = getCurrentUser(c)
     
-    const account = mockAccounts.find(acc => 
-      acc.id === accountId && acc.user_id === user.id
-    )
-    
-    if (!account) {
-      return c.json({ error: 'Account not found' }, 404)
+    if (!user) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: 'Authentication required'
+      }, 401)
     }
     
-    // Simulate sync trigger
+    const supabase = createSupabaseClient(c.env)
+    
+    // Verify account ownership
+    const { data: account, error: accountError } = await supabase
+      .from('accounts')
+      .select(`
+        id,
+        connection:connections(org_id)
+      `)
+      .eq('id', accountId)
+      .eq('connections.org_id', user.org_id)
+      .single()
+    
+    if (accountError || !account) {
+      return c.json({
+        error: 'BSR_NOT_FOUND',
+        message: 'Account not found'
+      }, 404)
+    }
+    
+    // TODO: Queue manual sync job in BSR_QUEUE
     console.log(`Manual sync triggered for account ${accountId}`)
     
     return c.json({ 
       success: true,
       message: 'Sync initiated successfully',
       account_id: accountId,
-      estimated_completion: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+      estimated_completion: new Date(Date.now() + 5 * 60 * 1000).toISOString()
     })
     
   } catch (error) {
     console.error('Manual sync error:', error)
-    return c.json({ error: 'Failed to trigger sync' }, 500)
-  }
-})
-
-// Get account statements
-accounts.get('/:accountId/statements', requireAuth, async (c) => {
-  try {
-    const accountId = c.req.param('accountId')
-    const user = c.get('user')
-    const { start_date, end_date, page = 1, page_size = 10 } = c.req.query()
-    
-    const account = mockAccounts.find(acc => 
-      acc.id === accountId && acc.user_id === user.id
-    )
-    
-    if (!account) {
-      return c.json({ error: 'Account not found' }, 404)
-    }
-    
-    // Mock statements data
-    const mockStatements = [
-      {
-        id: "stmt_1",
-        account_id: accountId,
-        period_start: "2024-07-01",
-        period_end: "2024-07-31", 
-        statement_date: "2024-08-01",
-        file_path: `/statements/${accountId}/2024-07.pdf`,
-        file_size: 245680,
-        status: "delivered",
-        created_at: "2024-08-01T09:00:00.000Z"
-      },
-      {
-        id: "stmt_2", 
-        account_id: accountId,
-        period_start: "2024-06-01",
-        period_end: "2024-06-30",
-        statement_date: "2024-07-01", 
-        file_path: `/statements/${accountId}/2024-06.pdf`,
-        file_size: 198432,
-        status: "delivered",
-        created_at: "2024-07-01T09:00:00.000Z"
-      }
-    ]
-    
     return c.json({
-      statements: mockStatements,
-      pagination: {
-        page: parseInt(page as string),
-        page_size: parseInt(page_size as string),
-        total_count: mockStatements.length,
-        total_pages: Math.ceil(mockStatements.length / parseInt(page_size as string))
-      }
-    })
-    
-  } catch (error) {
-    console.error('Get statements error:', error)
-    return c.json({ error: 'Failed to retrieve statements' }, 500)
+      error: 'BSR_INTERNAL_ERROR',
+      message: 'Failed to trigger sync'
+    }, 500)
   }
 })
 
