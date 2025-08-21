@@ -23,6 +23,9 @@ class ApiClient {
     try {
       const token = await this.getAuthToken()
       
+      console.log(`Making API request to: ${API_BASE_URL}${endpoint}`)
+      console.log('Auth token present:', !!token)
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: {
@@ -32,10 +35,14 @@ class ApiClient {
         },
       })
 
+      console.log(`Response status: ${response.status}`)
+      
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (!response.ok) {
-        return { error: data.error || data.message || 'Request failed' }
+        console.error('API request failed with status:', response.status, data)
+        return { error: data.error || data.message || `Request failed with status ${response.status}` }
       }
 
       return { data }

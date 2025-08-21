@@ -88,14 +88,22 @@ export function PlaidLinkButton() {
   const generateLinkToken = async () => {
     setIsGeneratingToken(true)
     try {
+      console.log('Attempting to create link token...')
       const response = await apiClient.createLinkToken()
+      console.log('Link token response:', response)
+      
+      if (response.error) {
+        throw new Error(response.error)
+      }
+      
       if (response.data?.link_token) {
         setLinkToken(response.data.link_token)
-        // The link token will trigger the useEffect below to auto-open when ready
+        console.log('Link token set successfully')
       } else {
-        throw new Error('No link token received')
+        throw new Error('No link token received from server')
       }
     } catch (error: any) {
+      console.error('Link token generation failed:', error)
       addNotification({
         type: 'error',
         title: 'Failed to initialize',
