@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
 import { ErrorBoundary } from '@/components/error-boundary'
-import { ClientOnly } from '@/components/client-only'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 
 // Safe dashboard stats component
@@ -115,22 +113,16 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <ClientOnly fallback={
-          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
-            Loading dashboard...
-          </div>
-        }>
-          <DashboardStats />
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-            gap: '20px' 
-          }}>
-            <RecentActivity />
-            <QuickActionsWrapper />
-          </div>
-        </ClientOnly>
+        <DashboardStats />
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+          gap: '20px' 
+        }}>
+          <RecentActivity />
+          <QuickActionsWrapper />
+        </div>
       </div>
     </ErrorBoundary>
   )

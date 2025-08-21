@@ -2,24 +2,20 @@
 
 import { Button } from '@/components/ui/button'
 import { Icons } from '@/components/icons'
-import { PlaidLinkButton } from '@/components/plaid/plaid-link-button'
-import { HydrationSafe } from '@/components/hydration-safe'
+import { useRouter } from 'next/navigation'
 
 export function QuickActions() {
+  const router = useRouter()
+  
   return (
-    <HydrationSafe 
-      className="space-y-3"
-      fallback={
-        <div className="space-y-3">
-          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
-          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
-          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
-          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
-          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
-        </div>
-      }
-    >
-      <PlaidLinkButton />
+    <div className="space-y-3">
+      <Button 
+        onClick={() => router.push('/dashboard/accounts')}
+        className="w-full justify-start"
+      >
+        <Icons.plus className="mr-2 h-4 w-4" />
+        Connect Bank Account
+      </Button>
       
       <Button variant="outline" className="w-full justify-start">
         <Icons.upload className="mr-2 h-4 w-4" />
@@ -40,6 +36,6 @@ export function QuickActions() {
         <Icons.download className="mr-2 h-4 w-4" />
         Download Activity Report
       </Button>
-    </HydrationSafe>
+    </div>
   )
 }
