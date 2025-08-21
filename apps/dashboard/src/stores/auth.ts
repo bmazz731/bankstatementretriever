@@ -43,7 +43,18 @@ export const useAuthStore = create<AuthState>()(persist(
   }),
   {
     name: 'auth-store',
-    storage: createJSONStorage(() => localStorage),
+    storage: createJSONStorage(() => {
+      // Only access localStorage on client side
+      if (typeof window !== 'undefined') {
+        return localStorage
+      }
+      // Return a mock storage for server-side
+      return {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {}
+      }
+    }),
     partialize: (state) => ({ 
       user: state.user,
       isAuthenticated: state.isAuthenticated 
@@ -55,5 +66,6 @@ export const useAuthStore = create<AuthState>()(persist(
         state.setLoading(true)
       }
     },
+    skipHydration: typeof window === 'undefined', // Skip hydration on server
   }
 ))

@@ -41,10 +41,14 @@ function ProductionDashboard({ children }: { children: React.ReactNode }) {
     try {
       const supabase = createSupabaseClient()
       await supabase.auth.signOut()
-      window.location.href = '/auth/signin'
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/signin'
+      }
     } catch (error) {
       console.error('Sign out error:', error)
-      window.location.href = '/auth/signin'
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/signin'
+      }
     }
   }
 
@@ -82,8 +86,8 @@ function ProductionDashboard({ children }: { children: React.ReactNode }) {
           <ClientOnly fallback={
             <span style={{ fontSize: '14px', color: '#6b7280' }}>Welcome</span>
           }>
-            <span style={{ fontSize: '14px', color: '#6b7280' }}>
-              Welcome, <span style={{ fontWeight: '500', color: '#111827' }}>{displayName}</span>
+            <span style={{ fontSize: '14px', color: '#6b7280' }} suppressHydrationWarning>
+              Welcome, <span style={{ fontWeight: '500', color: '#111827' }} suppressHydrationWarning>{displayName}</span>
             </span>
           </ClientOnly>
           

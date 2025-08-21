@@ -138,16 +138,21 @@ export function PlaidLinkButton() {
         onClick={handleClick}
         disabled={!hasMounted || isGeneratingToken || exchangeMutation.isPending}
         className="w-full justify-start"
+        suppressHydrationWarning
       >
-        {(!hasMounted || isGeneratingToken || exchangeMutation.isPending) ? (
-          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Icons.plus className="mr-2 h-4 w-4" />
-        )}
-        {!hasMounted ? 'Loading...' :
-         isGeneratingToken ? 'Initializing...' : 
-         exchangeMutation.isPending ? 'Connecting...' : 
-         'Connect Bank Account'}
+        <span suppressHydrationWarning>
+          {(!hasMounted || isGeneratingToken || exchangeMutation.isPending) ? (
+            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Icons.plus className="mr-2 h-4 w-4" />
+          )}
+        </span>
+        <span suppressHydrationWarning>
+          {!hasMounted ? 'Loading...' :
+           isGeneratingToken ? 'Initializing...' : 
+           exchangeMutation.isPending ? 'Connecting...' : 
+           'Connect Bank Account'}
+        </span>
       </Button>
 
       <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>

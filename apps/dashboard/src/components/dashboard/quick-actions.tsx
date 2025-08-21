@@ -3,10 +3,22 @@
 import { Button } from '@/components/ui/button'
 import { Icons } from '@/components/icons'
 import { PlaidLinkButton } from '@/components/plaid/plaid-link-button'
+import { HydrationSafe } from '@/components/hydration-safe'
 
 export function QuickActions() {
   return (
-    <div className="space-y-3">
+    <HydrationSafe 
+      className="space-y-3"
+      fallback={
+        <div className="space-y-3">
+          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
+          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
+          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
+          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
+          <div className="w-full h-10 bg-gray-100 rounded animate-pulse" />
+        </div>
+      }
+    >
       <PlaidLinkButton />
       
       <Button variant="outline" className="w-full justify-start">
@@ -28,6 +40,6 @@ export function QuickActions() {
         <Icons.download className="mr-2 h-4 w-4" />
         Download Activity Report
       </Button>
-    </div>
+    </HydrationSafe>
   )
 }
