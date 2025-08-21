@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ export function PlaidLinkButton() {
   const [linkToken, setLinkToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
   const [showConsentDialog, setShowConsentDialog] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
   const [consentData, setConsentData] = useState({
     authorizeRetrieval: false,
     hasAuthority: false,
@@ -72,18 +73,25 @@ export function PlaidLinkButton() {
     },
   })
 
+  // Track mount state for hydration safety
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Auto-open Plaid Link when token is ready and link is ready
+  useEffect(() => {
+    if (hasMounted && linkToken && ready && !showConsentDialog && !exchangeMutation.isPending) {
+      open()
+    }
+  }, [hasMounted, linkToken, ready, open, showConsentDialog, exchangeMutation.isPending])
+
   const generateLinkToken = async () => {
     setIsGeneratingToken(true)
     try {
       const response = await apiClient.createLinkToken()
       if (response.data?.link_token) {
         setLinkToken(response.data.link_token)
-        // Auto-open once token is ready
-        setTimeout(() => {
-          if (ready) {
-            open()
-          }
-        }, 100)
+        // The link token will trigger the useEffect below to auto-open when ready
       } else {
         throw new Error('No link token received')
       }
@@ -128,15 +136,16 @@ export function PlaidLinkButton() {
     <>
       <Button 
         onClick={handleClick}
-        disabled={isGeneratingToken || exchangeMutation.isPending}
+        disabled={!hasMounted || isGeneratingToken || exchangeMutation.isPending}
         className="w-full justify-start"
       >
-        {(isGeneratingToken || exchangeMutation.isPending) ? (
+        {(!hasMounted || isGeneratingToken || exchangeMutation.isPending) ? (
           <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Icons.plus className="mr-2 h-4 w-4" />
         )}
-        {isGeneratingToken ? 'Initializing...' : 
+        {!hasMounted ? 'Loading...' :
+         isGeneratingToken ? 'Initializing...' : 
          exchangeMutation.isPending ? 'Connecting...' : 
          'Connect Bank Account'}
       </Button>

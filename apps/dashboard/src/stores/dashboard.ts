@@ -83,11 +83,14 @@ interface NotificationState {
   clearNotifications: () => void
 }
 
+let notificationIdCounter = 0
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   
   addNotification: (notification) => {
-    const id = Math.random().toString(36).substr(2, 9)
+    notificationIdCounter += 1
+    const id = `notification-${notificationIdCounter}`
     const timestamp = new Date().toISOString()
     const newNotification = { ...notification, id, timestamp }
     
@@ -95,12 +98,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       notifications: [...state.notifications, newNotification]
     }))
     
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      set(state => ({
-        notifications: state.notifications.filter(n => n.id !== id)
-      }))
-    }, 5000)
+    // Auto-remove after 5 seconds - only on client side
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        set(state => ({
+          notifications: state.notifications.filter(n => n.id !== id)
+        }))
+      }, 5000)
+    }
   },
   
   removeNotification: (id) => {
