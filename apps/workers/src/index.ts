@@ -1,6 +1,6 @@
 /**
  * BankStatementRetriever Cloudflare Workers
- * Simplified MVP API without complex dependencies
+ * Phase 1 MVP API with Plaid Integration
  */
 
 import { Hono } from 'hono'
