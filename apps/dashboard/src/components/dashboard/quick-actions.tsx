@@ -13,7 +13,7 @@ export function QuickActions() {
         onClick={() => router.push('/dashboard/accounts')}
         className="w-full justify-start"
       >
-        <Icons.plus className="mr-2 h-4 w-4" />
+        <Icons.add className="mr-2 h-4 w-4" />
         Connect Bank Account
       </Button>
       
