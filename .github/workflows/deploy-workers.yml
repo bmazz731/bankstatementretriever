@@ -1,0 +1,61 @@
+name: Deploy Cloudflare Workers
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/workers/**'
+      - '.github/workflows/deploy-workers.yml'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'apps/workers/package-lock.json'
+          
+      - name: Install dependencies
+        working-directory: apps/workers
+        run: npm ci
+        
+      - name: Type check
+        working-directory: apps/workers
+        run: npm run types:check
+        
+      - name: Authenticate with Cloudflare
+        working-directory: apps/workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Setting up Wrangler authentication..."
+          echo "$CLOUDFLARE_API_TOKEN" | npx wrangler auth login --quiet || exit 1
+          npx wrangler whoami
+          
+      - name: Deploy to Production
+        working-directory: apps/workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "🚀 Deploying to Cloudflare Workers..."
+          npx wrangler deploy --env=production
+          
+      - name: Verify Deployment
+        run: |
+          echo "✅ Deployment completed!"
+          echo "🔗 API Endpoint: https://api.bankstatementretriever.com"
+          echo "🏥 Health Check: https://api.bankstatementretriever.com/health"
+          echo ""
+          echo "🔧 Next steps:"
+          echo "1. Verify API health check passes"
+          echo "2. Test authentication endpoints"
+          echo "3. Check Plaid integration functionality"
