@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Icons } from '@/components/icons'
 import { AccountActions } from '@/components/accounts/account-actions'
 import { AccountStatementsDialog } from '@/components/accounts/account-statements-dialog'
@@ -60,72 +61,102 @@ export default function AccountsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 py-6 space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Bank Accounts</h1>
+          <p className="text-muted-foreground mt-2">
             Manage your connected bank accounts and statement delivery
           </p>
         </div>
-        <PlaidLinkButton />
+        <div className="flex-shrink-0">
+          <PlaidLinkButton />
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Connected Accounts</CardTitle>
+          <CardTitle className="text-xl">Connected Accounts</CardTitle>
           <CardDescription>
-            View and manage your bank account connections
+            View and manage your bank account connections and statement delivery
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1">
-                <Input
-                  placeholder="Search accounts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+                <div className="relative">
+                  <Icons.search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search accounts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 max-w-md"
+                  />
+                </div>
               </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <div className="flex items-center space-x-2">
+                <Icons.filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="paused">Paused</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {isLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse border rounded-lg p-4">
-                    <div className="space-y-3">
-                      <div className="h-4 bg-muted rounded w-1/4"></div>
-                      <div className="h-3 bg-muted rounded w-1/2"></div>
-                      <div className="h-3 bg-muted rounded w-1/3"></div>
-                    </div>
-                  </div>
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-5 w-5 bg-muted rounded"></div>
+                          <div className="h-6 bg-muted rounded w-1/3"></div>
+                          <div className="h-5 bg-muted rounded w-16"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <div className="h-3 bg-muted rounded w-20"></div>
+                            <div className="h-4 bg-muted rounded w-32"></div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-muted rounded w-24"></div>
+                            <div className="h-4 bg-muted rounded w-28"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : filteredAccounts.length === 0 ? (
-              <div className="text-center py-8">
-                <Icons.building className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">
-                  {searchTerm || statusFilter !== 'all' ? 'No matching accounts' : 'No bank accounts connected'}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {searchTerm || statusFilter !== 'all' 
-                    ? 'Try adjusting your search or filters'
-                    : 'Connect your first bank account to get started'
-                  }
-                </p>
-              </div>
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="rounded-full bg-muted p-4 mb-4">
+                    <Icons.building className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {searchTerm || statusFilter !== 'all' ? 'No matching accounts found' : 'No bank accounts connected'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                    {searchTerm || statusFilter !== 'all' 
+                      ? 'Try adjusting your search terms or status filter to find your accounts'
+                      : 'Connect your first bank account to start retrieving your statements automatically'
+                    }
+                  </p>
+                  {(!searchTerm && statusFilter === 'all') && (
+                    <PlaidLinkButton />
+                  )}
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-4">
                 {filteredAccounts.map((account) => {
@@ -134,73 +165,113 @@ export default function AccountsPage() {
                   const lastSync = account.last_statement_check || account.connection?.last_sync
 
                   return (
-                    <div key={account.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3">
-                            <h3 className="font-medium">{account.name}</h3>
-                            <Badge
-                              variant={
-                                statusColor === 'green' ? 'success' :
-                                statusColor === 'yellow' ? 'warning' :
-                                statusColor === 'red' ? 'error' : 'secondary'
-                              }
-                            >
-                              {account.status}
-                            </Badge>
-                          </div>
-                          
-                          <div className="mt-2 space-y-1">
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Institution:</strong> {account.connection?.institution_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Account:</strong> {account.type}
-                              {account.subtype && ` (${account.subtype})`}
-                              {account.mask && ` •••• ${account.mask}`}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Connection:</strong>
-                              <span className={`ml-1 inline-flex items-center space-x-1 ${
-                                connectionStatus === 'active' ? 'text-green-600' :
-                                connectionStatus === 'reauth_required' ? 'text-yellow-600' :
-                                'text-red-600'
-                              }`}>
-                                <div className={`w-2 h-2 rounded-full ${
-                                  connectionStatus === 'active' ? 'bg-green-500' :
-                                  connectionStatus === 'reauth_required' ? 'bg-yellow-500' :
-                                  'bg-red-500'
-                                }`} />
-                                <span className="capitalize">{connectionStatus}</span>
-                              </span>
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              <strong>Statements:</strong> {account.statements_supported ? 'Supported' : 'Not supported'}
-                            </p>
-                            {lastSync && (
-                              <p className="text-sm text-muted-foreground">
-                                <strong>Last sync:</strong> {formatRelativeTime(lastSync)}
-                              </p>
+                    <Card key={account.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0 space-y-4">
+                            {/* Header */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2">
+                                  <Icons.building className="h-5 w-5 text-muted-foreground" />
+                                  <h3 className="text-lg font-semibold">{account.name}</h3>
+                                </div>
+                                <Badge
+                                  variant={
+                                    statusColor === 'green' ? 'success' :
+                                    statusColor === 'yellow' ? 'warning' :
+                                    statusColor === 'red' ? 'error' : 'secondary'
+                                  }
+                                  className="ml-2"
+                                >
+                                  {account.status}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            {/* Account Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-muted-foreground">Institution</p>
+                                <p className="text-sm">{account.connection?.institution_name}</p>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-muted-foreground">Account Type</p>
+                                <p className="text-sm">
+                                  {account.type}
+                                  {account.subtype && ` (${account.subtype})`}
+                                  {account.mask && (
+                                    <span className="text-muted-foreground ml-1">•••• {account.mask}</span>
+                                  )}
+                                </p>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-muted-foreground">Connection Status</p>
+                                <div className={`inline-flex items-center space-x-2 ${
+                                  connectionStatus === 'active' ? 'text-green-600' :
+                                  connectionStatus === 'reauth_required' ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    connectionStatus === 'active' ? 'bg-green-500' :
+                                    connectionStatus === 'reauth_required' ? 'bg-yellow-500' :
+                                    'bg-red-500'
+                                  }`} />
+                                  <span className="text-sm capitalize">{connectionStatus}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-muted-foreground">Statement Support</p>
+                                <div className="flex items-center space-x-2">
+                                  {account.statements_supported ? (
+                                    <>
+                                      <Icons.check className="h-4 w-4 text-green-500" />
+                                      <span className="text-sm text-green-700">Supported</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Icons.x className="h-4 w-4 text-red-500" />
+                                      <span className="text-sm text-red-700">Not supported</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {lastSync && (
+                                <div className="space-y-1 md:col-span-2">
+                                  <p className="text-sm font-medium text-muted-foreground">Last Sync</p>
+                                  <p className="text-sm">{formatRelativeTime(lastSync)}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Error Message */}
+                            {account.connection?.error_message && (
+                              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                                <div className="flex items-start space-x-2">
+                                  <Icons.warning className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                  <p className="text-sm text-red-800 dark:text-red-200">
+                                    {truncateText(account.connection.error_message, 100)}
+                                  </p>
+                                </div>
+                              </div>
                             )}
                           </div>
-
-                          {account.connection?.error_message && (
-                            <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                              <p className="text-sm text-red-800 dark:text-red-200">
-                                <Icons.warning className="inline mr-1 h-4 w-4" />
-                                {truncateText(account.connection.error_message, 100)}
-                              </p>
-                            </div>
-                          )}
+                          
+                          {/* Actions */}
+                          <div className="ml-6 flex-shrink-0">
+                            <AccountActions
+                              account={account}
+                              onViewStatements={() => handleViewStatements(account)}
+                              onBackfill={() => handleBackfill(account)}
+                            />
+                          </div>
                         </div>
-                        
-                        <AccountActions
-                          account={account}
-                          onViewStatements={() => handleViewStatements(account)}
-                          onBackfill={() => handleBackfill(account)}
-                        />
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   )
                 })}
               </div>
