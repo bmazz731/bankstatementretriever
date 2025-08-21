@@ -101,8 +101,25 @@ plaid.post('/link_token', async (c) => {
       }, 401)
     }
 
-    const plaidService = new PlaidService(c.env)
-    const linkTokenResponse = await plaidService.createLinkToken(user.id)
+    let plaidService
+    let linkTokenResponse
+    
+    try {
+      plaidService = new PlaidService(c.env)
+    } catch (error) {
+      console.error('PlaidService initialization error:', error)
+      
+      if (error.message.includes('environment variable is required')) {
+        return c.json({
+          error: 'BSR_CONFIG_ERROR',
+          message: 'Plaid service configuration incomplete. Missing environment variables.'
+        }, 500)
+      }
+      
+      throw error // Re-throw non-config errors
+    }
+    
+    linkTokenResponse = await plaidService.createLinkToken(user.id)
     
     return c.json({
       link_token: linkTokenResponse.link_token,
@@ -155,8 +172,24 @@ plaid.post('/exchange_public_token', async (c) => {
     const body = await c.req.json()
     const validatedInput = ExchangeTokenSchema.parse(body)
     
-    const plaidService = new PlaidService(c.env)
-    const encryption = new TokenEncryption(c.env.ENCRYPTION_KEY)
+    let plaidService
+    let encryption
+    
+    try {
+      plaidService = new PlaidService(c.env)
+      encryption = new TokenEncryption(c.env.ENCRYPTION_KEY)
+    } catch (error) {
+      console.error('PlaidService/TokenEncryption initialization error:', error)
+      
+      if (error.message.includes('environment variable is required') || error.message.includes('ENCRYPTION_KEY')) {
+        return c.json({
+          error: 'BSR_CONFIG_ERROR',
+          message: 'Service configuration incomplete. Missing environment variables.'
+        }, 500)
+      }
+      
+      throw error // Re-throw non-config errors
+    }
 
     // Step 1: Exchange public token for access token
     const exchangeResponse = await plaidService.exchangePublicToken(validatedInput.public_token)
