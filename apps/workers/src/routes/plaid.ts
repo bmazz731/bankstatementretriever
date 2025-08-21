@@ -77,6 +77,54 @@ plaid.post('/webhook', async (c) => {
   }
 })
 
+// TEST ENDPOINT: Create link token without auth (MVP testing only)
+plaid.post('/test_link_token', async (c) => {
+  try {
+    console.log('TEST: Creating Plaid link token without authentication')
+    
+    let plaidService
+    
+    try {
+      plaidService = new PlaidService(c.env)
+    } catch (error) {
+      console.error('PlaidService initialization error:', error)
+      
+      if (error.message.includes('environment variable is required')) {
+        return c.json({
+          error: 'BSR_CONFIG_ERROR',
+          message: 'Plaid service configuration incomplete. Missing environment variables.'
+        }, 500)
+      }
+      
+      throw error // Re-throw non-config errors
+    }
+    
+    const linkTokenResponse = await plaidService.createLinkToken('test_user_123')
+    
+    return c.json({
+      link_token: linkTokenResponse.link_token,
+      expiration: linkTokenResponse.expiration,
+      test_mode: true
+    })
+
+  } catch (error) {
+    console.error('Test link token creation error:', error)
+    
+    if (error instanceof PlaidAPIError) {
+      return c.json({
+        error: 'BSR_PLAID_ERROR',
+        message: error.plaidError.error_message,
+        plaid_error: error.plaidError
+      }, 400)
+    }
+    
+    return c.json({
+      error: 'BSR_INTERNAL_ERROR',
+      message: 'Failed to create test link token'
+    }, 500)
+  }
+})
+
 // Create link token for Plaid Link - production implementation
 plaid.post('/link_token', async (c) => {
   try {
