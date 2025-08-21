@@ -109,11 +109,25 @@ export class PlaidService {
   private baseUrl: string
 
   constructor(env: Env) {
+    // Validate required environment variables
+    if (!env.PLAID_CLIENT_ID) {
+      throw new Error('PLAID_CLIENT_ID environment variable is required')
+    }
+    if (!env.PLAID_SECRET) {
+      throw new Error('PLAID_SECRET environment variable is required')
+    }
+    if (!env.PLAID_ENV) {
+      throw new Error('PLAID_ENV environment variable is required')
+    }
+    if (!env.DOMAIN) {
+      throw new Error('DOMAIN environment variable is required for webhook URL')
+    }
+
     this.config = {
       clientId: env.PLAID_CLIENT_ID,
       secret: env.PLAID_SECRET,
-      environment: env.PLAID_ENV,
-      webhook: env.PLAID_WEBHOOK_SECRET ? `https://${env.DOMAIN}/api/plaid/webhook` : undefined
+      environment: env.PLAID_ENV as 'sandbox' | 'development' | 'production',
+      webhook: `https://${env.DOMAIN}/api/plaid/webhook`
     }
 
     this.baseUrl = {
@@ -121,6 +135,10 @@ export class PlaidService {
       development: 'https://development.api.plaid.com', 
       production: 'https://production.api.plaid.com'
     }[this.config.environment]
+
+    if (!this.baseUrl) {
+      throw new Error(`Invalid PLAID_ENV: ${env.PLAID_ENV}. Must be 'sandbox', 'development', or 'production'`)
+    }
   }
 
   /**
@@ -134,7 +152,7 @@ export class PlaidService {
       user: {
         client_user_id: userId
       },
-      products: ['statements', 'auth', 'identity'],
+      products: ['statements'],
       webhook: this.config.webhook,
       account_filters: {
         depository: {
@@ -157,7 +175,7 @@ export class PlaidService {
       public_token: publicToken
     }
 
-    return this.makeRequest<ItemPublicTokenExchangeResponse>('/link/token/exchange', request)
+    return this.makeRequest<ItemPublicTokenExchangeResponse>('/item/public_token/exchange', request)
   }
 
   /**
@@ -227,25 +245,36 @@ export class PlaidService {
   // Private helper methods
 
   private async makeRequest<T>(endpoint: string, data: any): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'PLAID-CLIENT-ID': this.config.clientId,
-        'PLAID-SECRET': this.config.secret,
-        'User-Agent': 'BankStatementRetriever/1.0'
-      },
-      body: JSON.stringify(data)
-    })
+    console.log(`Making Plaid API request to: ${this.baseUrl}${endpoint}`)
+    console.log('Request payload:', JSON.stringify(data, null, 2))
+    
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'PLAID-CLIENT-ID': this.config.clientId,
+          'PLAID-SECRET': this.config.secret,
+          'User-Agent': 'BankStatementRetriever/1.0'
+        },
+        body: JSON.stringify(data)
+      })
 
-    const responseData = await response.json()
+      console.log(`Plaid API response status: ${response.status}`)
+      
+      const responseData = await response.json()
+      console.log('Plaid API response data:', JSON.stringify(responseData, null, 2))
 
-    if (!response.ok) {
-      console.error(`Plaid API ${endpoint} failed:`, responseData)
-      throw new PlaidAPIError(responseData)
+      if (!response.ok) {
+        console.error(`Plaid API ${endpoint} failed with status ${response.status}:`, responseData)
+        throw new PlaidAPIError(responseData)
+      }
+
+      return responseData as T
+    } catch (error) {
+      console.error(`Plaid API request to ${endpoint} threw an error:`, error)
+      throw error
     }
-
-    return responseData as T
   }
 }
 
