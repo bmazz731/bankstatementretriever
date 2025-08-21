@@ -2,19 +2,29 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Icons } from '@/components/icons'
-import { ClientOnly } from '@/components/client-only'
 import { AccountActions } from '@/components/accounts/account-actions'
 import { AccountStatementsDialog } from '@/components/accounts/account-statements-dialog'
 import { BackfillDialog } from '@/components/accounts/backfill-dialog'
-import { PlaidLinkButton } from '@/components/plaid/plaid-link-button'
 import { getStatusColor, formatRelativeTime, truncateText } from '@/lib/utils'
 import apiClient from '@/lib/api'
 import type { Account } from '@/types'
+
+// Dynamic import with ssr: false to prevent server-side evaluation
+const PlaidLinkButton = dynamic(() => import('@/components/plaid/plaid-link-button'), { 
+  ssr: false,
+  loading: () => (
+    <Button disabled className="w-auto">
+      <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+      Loading...
+    </Button>
+  )
+})
 
 export default function AccountsPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,16 +68,7 @@ export default function AccountsPage() {
             Manage your connected bank accounts and statement delivery
           </p>
         </div>
-        <ClientOnly
-          fallback={
-            <Button disabled className="w-auto">
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
-            </Button>
-          }
-        >
-          <PlaidLinkButton />
-        </ClientOnly>
+        <PlaidLinkButton />
       </div>
 
       <Card>

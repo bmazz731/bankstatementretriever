@@ -144,7 +144,7 @@ export function PlaidLinkButton() {
           {(!hasMounted || isGeneratingToken || exchangeMutation.isPending) ? (
             <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Icons.plus className="mr-2 h-4 w-4" />
+            <Icons.add className="mr-2 h-4 w-4" />
           )}
         </span>
         <span suppressHydrationWarning>
