@@ -17,7 +17,7 @@ health.get('/', async (c) => {
     environment: c.env.ENVIRONMENT,
     timestamp: new Date().toISOString(),
     uptime: Math.floor(startTime / 1000),
-    build: process.env.CF_PAGES_COMMIT_SHA || 'local'
+    build: c.env.CF_PAGES_COMMIT_SHA || 'local'
   }
 
   return c.json(healthData)

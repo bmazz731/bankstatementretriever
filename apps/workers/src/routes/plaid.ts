@@ -5,7 +5,7 @@ import { Hono } from 'hono'
 import { createClient } from '@supabase/supabase-js'
 import { PlaidService, PlaidAPIError } from '../lib/plaid-service'
 import { TokenEncryption } from '../lib/encryption'
-import { requestId, apiLogger, errorHandler, extractUserContext } from '../middleware/api'
+import { requestId, apiLogger, errorHandler, extractUserContext, jwtAuth } from '../middleware/api'
 import { z } from 'zod'
 import type { Env } from '../types/env'
 
@@ -78,13 +78,26 @@ plaid.post('/webhook', async (c) => {
 })
 
 // Create link token for Plaid Link - production implementation
-plaid.post('/link_token', extractUserContext, async (c) => {
+plaid.post('/link_token', async (c) => {
   try {
-    const user = getCurrentUser(c)
-    if (!user) {
+    // Simple auth check using Authorization header
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({
         error: 'BSR_AUTH_ERROR',
         message: 'Authentication required'
+      }, 401)
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createSupabaseClient(c.env)
+    
+    // Verify the token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (error || !user) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: 'Invalid token'
       }, 401)
     }
 
@@ -115,13 +128,26 @@ plaid.post('/link_token', extractUserContext, async (c) => {
 })
 
 // Exchange public token for access token - production implementation
-plaid.post('/exchange_public_token', extractUserContext, async (c) => {
+plaid.post('/exchange_public_token', async (c) => {
   try {
-    const user = getCurrentUser(c)
-    if (!user) {
+    // Simple auth check using Authorization header
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({
         error: 'BSR_AUTH_ERROR',
         message: 'Authentication required'
+      }, 401)
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createSupabaseClient(c.env)
+    
+    // Verify the token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (error || !user) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: 'Invalid token'
       }, 401)
     }
 
@@ -130,7 +156,6 @@ plaid.post('/exchange_public_token', extractUserContext, async (c) => {
     const validatedInput = ExchangeTokenSchema.parse(body)
     
     const plaidService = new PlaidService(c.env)
-    const supabase = createSupabaseClient(c.env)
     const encryption = new TokenEncryption(c.env.ENCRYPTION_KEY)
 
     // Step 1: Exchange public token for access token
@@ -146,7 +171,7 @@ plaid.post('/exchange_public_token', extractUserContext, async (c) => {
     const { data: connection, error: connectionError } = await supabase
       .from('connections')
       .insert({
-        org_id: user.org_id,
+        org_id: user.id, // Use user.id as org_id for MVP
         plaid_item_id: exchangeResponse.item_id,
         institution: accountsResponse.item.institution_id || 'unknown',
         access_token_encrypted: `${encryptedToken.encrypted}:${encryptedToken.iv}`,
