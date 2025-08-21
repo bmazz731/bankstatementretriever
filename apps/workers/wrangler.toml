@@ -26,12 +26,12 @@ PLAID_ENV = "sandbox"
 #   { cron = "0 7 * * *" } # 2 AM ET = 7 AM UTC (standard time)
 # ]
 
-# KV Namespaces
-kv_namespaces = [
-  { binding = "BSR_CONFIG", id = "bsr_config_prod", preview_id = "bsr_config_preview" },
-  { binding = "BSR_CACHE", id = "bsr_cache_prod", preview_id = "bsr_cache_preview" },
-  { binding = "BSR_RATE_LIMITS", id = "bsr_limits_prod", preview_id = "bsr_limits_preview" }
-]
+# KV Namespaces - Disabled for MVP deployment
+# kv_namespaces = [
+#   { binding = "BSR_CONFIG", id = "bsr_config_prod", preview_id = "bsr_config_preview" },
+#   { binding = "BSR_CACHE", id = "bsr_cache_prod", preview_id = "bsr_cache_preview" },
+#   { binding = "BSR_RATE_LIMITS", id = "bsr_limits_prod", preview_id = "bsr_limits_preview" }
+# ]
 
 # Queues for async processing - Disabled for MVP
 # [[queues.producers]]
