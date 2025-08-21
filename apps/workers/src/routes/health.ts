@@ -32,9 +32,9 @@ health.get('/deep', async (c) => {
     // Check database connection
     checks.database = await checkDatabase(c.env)
     
-    // Check KV stores
-    checks.kv_config = await checkKV(c.env.BSR_CONFIG)
-    checks.kv_cache = await checkKV(c.env.BSR_CACHE)
+    // Check KV stores - Disabled for MVP deployment
+    // checks.kv_config = await checkKV(c.env.BSR_CONFIG)
+    // checks.kv_cache = await checkKV(c.env.BSR_CACHE)
     
     // Check queue health
     checks.queues = await checkQueues(c.env)
