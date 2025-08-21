@@ -326,3 +326,6 @@ export function PlaidLinkButton() {
     </>
   )
 }
+
+// Default export for dynamic imports
+export default PlaidLinkButton
