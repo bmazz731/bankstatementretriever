@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { ClientOnly } from '@/components/client-only'
+import { QuickActions } from '@/components/dashboard/quick-actions'
 
 // Safe dashboard stats component
 function DashboardStats() {
@@ -86,14 +87,8 @@ function RecentActivity() {
   )
 }
 
-// Safe quick actions component
-function QuickActions() {
-  const actions = [
-    { label: 'Sync All Accounts', color: '#10b981', onClick: () => alert('Sync initiated') },
-    { label: 'Add New Account', color: '#3b82f6', onClick: () => alert('Add account') },
-    { label: 'View Settings', color: '#6b7280', onClick: () => window.location.href = '/dashboard/settings' },
-  ]
-
+// Safe quick actions wrapper component
+function QuickActionsWrapper() {
   return (
     <div style={{
       border: '1px solid #e5e7eb',
@@ -102,26 +97,7 @@ function QuickActions() {
       backgroundColor: 'white'
     }}>
       <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>Quick Actions</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {actions.map((action, index) => (
-          <button
-            key={index}
-            onClick={action.onClick}
-            style={{
-              padding: '12px 16px',
-              backgroundColor: action.color,
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
+      <QuickActions />
     </div>
   )
 }
@@ -152,7 +128,7 @@ export default function DashboardPage() {
             gap: '20px' 
           }}>
             <RecentActivity />
-            <QuickActions />
+            <QuickActionsWrapper />
           </div>
         </ClientOnly>
       </div>
