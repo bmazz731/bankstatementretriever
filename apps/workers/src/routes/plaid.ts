@@ -298,6 +298,36 @@ plaid.post('/exchange_public_token', async (c) => {
     // Step 4: Store connection in database
     const supabase = createSupabaseClient(c.env)
     
+    // Ensure organization exists for the foreign key constraint
+    console.log('Checking if organization exists for org_id:', user.org_id)
+    const { data: existingOrg } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('id', user.org_id)
+      .single()
+    
+    if (!existingOrg) {
+      console.log('Organization does not exist, creating it with id:', user.org_id)
+      const { error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          id: user.org_id,
+          owner_user_id: user.id,
+          plan: 'free',
+          status: 'active'
+        })
+      
+      if (orgError) {
+        console.error('Failed to create organization:', orgError)
+        return c.json({
+          error: 'BSR_DATABASE_ERROR',
+          message: 'Failed to create organization',
+          debug: { orgError, user_id: user.id, org_id: user.org_id }
+        }, 500)
+      }
+      console.log('Organization created successfully')
+    }
+    
     console.log('Attempting to insert connection with data:', {
       org_id: user.org_id,
       plaid_item_id: exchangeResponse.item_id,
@@ -325,8 +355,8 @@ plaid.post('/exchange_public_token', async (c) => {
         errorMessage: connectionError.message,
         errorDetails: connectionError.details,
         errorHint: connectionError.hint,
-        user_org_id: user.org_id,
-        user_id: user.id,
+        user_org_id: validatedUser.org_id,
+        user_id: validatedUser.id,
         plaid_item_id: exchangeResponse.item_id
       })
       
@@ -337,7 +367,7 @@ plaid.post('/exchange_public_token', async (c) => {
           message: 'Failed to store connection: Organization not found. Please contact support.',
           debug: {
             constraint: connectionError.details,
-            org_id: user.org_id
+            org_id: validatedUser.org_id
           }
         }, 500)
       }
@@ -365,7 +395,7 @@ plaid.post('/exchange_public_token', async (c) => {
       }, 500)
     }
 
-    // Step 5: Store accounts and check statements support
+    // Step 6: Store accounts and check statements support
     const accountsToReturn = []
     
     for (const account of accountsResponse.accounts) {
@@ -422,7 +452,7 @@ plaid.post('/exchange_public_token', async (c) => {
       })
     }
 
-    // Step 6: Schedule initial backfill if requested
+    // Step 7: Schedule initial backfill if requested
     if (validatedInput.backfill_months > 0) {
       const endDate = new Date()
       const startDate = new Date()
