@@ -63,7 +63,7 @@
 ### 4.3 Statement Detection & Retrieval
 
 - **Detection:** Plaid statements API only (no proxy/transaction heuristics in MVP).
-- **Learning period:** Daily poll at **2:00 AM America/New\_York** for the first **45 days** per account; then switch to learned schedule (per‑account pattern persisted).
+- **Learning period:** Daily poll at **2:00 AM America/New_York** for the first **45 days** per account; then switch to learned schedule (per‑account pattern persisted).
 - **First attempt post‑generation:** Within **1 hour** of detected availability.
 - **Duplicate prevention:** Statement ledger keyed by `{institution, accountId, periodEnd, fileType}`.
   - Auto‑version duplicates as `..._statement_v2.pdf` (or `.csv`).
@@ -201,8 +201,8 @@
 
 > A public API is **post‑MVP**. The following describe internal endpoints and contracts.
 
-- **POST /api/plaid/link\_token** → `{link_token}`
-- **POST /api/plaid/exchange\_public\_token** → `{item_id, accounts[]}`
+- **POST /api/plaid/link_token** → `{link_token}`
+- **POST /api/plaid/exchange_public_token** → `{item_id, accounts[]}`
 - **GET /api/accounts** → List accounts for current org. Supports `?status=active|paused` and pagination `?page=&page_size=`.\
   **200** `{accounts: [{account_id, connection_id, institution, account_name, account_last4, type, statements_supported, status}], page, page_size, total}`
 - **DELETE /api/accounts/{id}** → Soft‑delete or inactivate account (preserve history). **204** on success.
@@ -296,7 +296,7 @@ Instrumentation requirements: emit events for `statement_detected`, `retrieval_a
 
 ## 13. Rollout Plan
 
-- **Default timezone:** America/New\_York for all jobs.
+- **Default timezone:** America/New_York for all jobs.
 - **Environment gates:** Dev → Staging (seeded with sandbox Plaid) → Prod.
 - **Canary:** Enable for 10% of orgs for first week; monitor Sentry alerts and delivery SLO.
 - **Runbooks:** Publish incident SOPs; set on‑call rotations.
@@ -398,7 +398,7 @@ Instrumentation requirements: emit events for `statement_detected`, `retrieval_a
 
 ### 15.13 Timezone & DST
 
-- **Scheduling:** System jobs run in **America/New\_York**.
+- **Scheduling:** System jobs run in **America/New_York**.
 - **User display:** Always show schedule previews in the user’s local browser timezone; annotate DST transitions explicitly.
 
 ### 15.14 AI Scope (Clarified)
@@ -467,7 +467,7 @@ Instrumentation requirements: emit events for `statement_detected`, `retrieval_a
 
 ### 15.22 Multi‑Destination Coordination
 
-- **Correlation IDs:** Generate a single ``** per statement retrieval event** and a unique ``** per destination**. Include both in logs and notifications; webhooks carry the shared `requestId`.
+- **Correlation IDs:** Generate a single `** per statement retrieval event** and a unique `** per destination**. Include both in logs and notifications; webhooks carry the shared `requestId`.
 - **Atomicity:** Each destination is independent. Success on one does not block others. Partial status = at least one failed and one succeeded.
 - **Retries:** Apply delivery retry schedule per destination. Pausing one destination does not pause others.
 - **UI/UX:** In the Statement detail drawer: show per‑destination chips (Success/Retrying/Paused) and an aggregate row status.
@@ -497,4 +497,3 @@ Instrumentation requirements: emit events for `statement_detected`, `retrieval_a
 - **2025‑08‑13:** Added §15 Gaps Addressed, expanded reliability, security, and ops specifications; clarified AI scope; added downgrade policy.
 - **2025‑08‑13:** Added §15.18–15.24 covering Plaid statements limitations, free‑tier abuse prevention, webhook payload sizing, availability semantics, multi‑destination coordination, billing edge cases, and storage OAuth refresh.
 - **2025‑08‑13:** Locked decisions: MVP statements‑only (no transactions CSV stopgap); Cloudflare Turnstile at signup; free tier allows generic domains; predictive “Expected by \~DATE” UI; payment failure dunning per MVP (Day0/Day1‑pause/Day3 retry).
-

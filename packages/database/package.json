@@ -22,7 +22,12 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },
-  "keywords": ["database", "prisma", "postgresql", "supabase"],
+  "keywords": [
+    "database",
+    "prisma",
+    "postgresql",
+    "supabase"
+  ],
   "author": "Brandon Mazzella",
   "license": "UNLICENSED"
 }

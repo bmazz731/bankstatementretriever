@@ -1,28 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { createSupabaseClient } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Icons } from '@/components/icons'
-import { useNotificationStore } from '@/stores/dashboard'
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createSupabaseClient } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Icons } from "@/components/icons";
+import { useNotificationStore } from "@/stores/dashboard";
 
 export default function SignUpPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createSupabaseClient()
-  const { addNotification } = useNotificationStore()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createSupabaseClient();
+  const { addNotification } = useNotificationStore();
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -33,64 +40,65 @@ export default function SignUpPage() {
             full_name: fullName,
           },
         },
-      })
+      });
 
       if (error) {
         addNotification({
-          type: 'error',
-          title: 'Sign up failed',
+          type: "error",
+          title: "Sign up failed",
           description: error.message,
-        })
+        });
       } else {
         addNotification({
-          type: 'success',
-          title: 'Sign up successful',
-          description: 'Please check your email to verify your account',
-        })
-        router.push('/auth/signin')
+          type: "success",
+          title: "Sign up successful",
+          description: "Please check your email to verify your account",
+        });
+        router.push("/auth/signin");
       }
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Sign up failed',
-        description: 'An unexpected error occurred',
-      })
+        type: "error",
+        title: "Sign up failed",
+        description: "An unexpected error occurred",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignUp = async () => {
-    setIsGoogleLoading(true)
+    setIsGoogleLoading(true);
 
     try {
       // Safe way to get origin
-      const origin = typeof window !== 'undefined' ? window.location.origin : ''
-      
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${origin}/auth/callback`,
         },
-      })
+      });
 
       if (error) {
         addNotification({
-          type: 'error',
-          title: 'Google sign up failed',
+          type: "error",
+          title: "Google sign up failed",
           description: error.message,
-        })
+        });
       }
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Google sign up failed',
-        description: 'An unexpected error occurred',
-      })
+        type: "error",
+        title: "Google sign up failed",
+        description: "An unexpected error occurred",
+      });
     } finally {
-      setIsGoogleLoading(false)
+      setIsGoogleLoading(false);
     }
-  }
+  };
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
@@ -128,7 +136,7 @@ export default function SignUpPage() {
                 )}
                 Continue with Google
               </Button>
-              
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -179,13 +187,14 @@ export default function SignUpPage() {
                 )}
                 Create account
               </Button>
-              
+
               <p className="text-xs text-center text-muted-foreground">
-                By creating an account, you agree to our Terms of Service and Privacy Policy
+                By creating an account, you agree to our Terms of Service and
+                Privacy Policy
               </p>
-              
+
               <div className="text-center text-sm">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Link
                   href="/auth/signin"
                   className="text-primary hover:underline"
@@ -198,5 +207,5 @@ export default function SignUpPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

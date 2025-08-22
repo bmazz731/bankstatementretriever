@@ -9,7 +9,7 @@ Phase 1 Plaid Integration is **ready for deployment**! All code has been prepare
 **Total Time**: ~45-60 minutes
 
 1. **Critical Action Items**: See `ACTION_ITEMS.md` for complete deployment checklist
-2. **Database Migration**: Execute `deploy/database-migration.sql` in Supabase  
+2. **Database Migration**: Execute `deploy/database-migration.sql` in Supabase
 3. **Deploy Workers**: Run `./deploy/deploy-workers.sh` (requires Cloudflare API token)
 4. **Deploy Dashboard**: Run `./deploy/deploy-dashboard.sh` (requires Vercel CLI)
 5. **Test**: Run `node scripts/test-plaid-integration.js`
@@ -30,6 +30,7 @@ This guide will help you set up BankStatementRetriever for **local development**
 ## 1. Environment Setup
 
 ### 1.1 Copy Environment Template
+
 ```bash
 cp .env.example .env.local
 ```
@@ -67,11 +68,13 @@ cp .env.example .env.local
 ### 1.4 Generate Encryption Key
 
 Generate a secure encryption key for token storage:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
 Update `.env.local`:
+
 ```env
 ENCRYPTION_KEY=generated_base64_key_here
 ```
@@ -100,6 +103,7 @@ npm install
 ### 3.2 Dashboard Environment
 
 Create dashboard-specific environment file:
+
 ```bash
 cp .env.local apps/dashboard/.env.local
 ```
@@ -107,6 +111,7 @@ cp .env.local apps/dashboard/.env.local
 ### 3.3 Workers Environment
 
 For local workers development:
+
 ```bash
 # Create workers environment file
 cat > apps/workers/.dev.vars << EOF
@@ -125,12 +130,14 @@ EOF
 ### 4.1 Start Development Servers
 
 Terminal 1 (Dashboard):
+
 ```bash
 cd apps/dashboard
 npm run dev
 ```
 
 Terminal 2 (Workers API):
+
 ```bash
 cd apps/workers
 npm run dev
@@ -153,6 +160,7 @@ The API will be available at http://localhost:8787
 ### 4.3 Available Sandbox Institutions
 
 For testing, use these popular sandbox institutions:
+
 - **Chase**: Institution ID `ins_109508`
 - **Bank of America**: Institution ID `ins_109509`
 - **Wells Fargo**: Institution ID `ins_109510`
@@ -161,6 +169,7 @@ For testing, use these popular sandbox institutions:
 ## 5. Testing Statement Support
 
 Not all sandbox accounts support statements. Test with:
+
 - Chase checking/savings accounts (usually supported)
 - Bank of America checking accounts (usually supported)
 - Some credit card accounts
@@ -172,6 +181,7 @@ The system will automatically detect statement support during account connection
 ### 6.1 Cloudflare Workers
 
 1. Install Cloudflare Wrangler CLI:
+
    ```bash
    npm install -g wrangler
    ```
@@ -243,6 +253,7 @@ When ready for production:
    - Check API response format matches frontend expectations
 
 For additional help, check the logs in:
+
 - Browser console (frontend)
 - Cloudflare Workers logs (API)
 - Supabase logs (database)

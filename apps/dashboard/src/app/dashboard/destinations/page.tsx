@@ -1,21 +1,27 @@
-"use client"
+"use client";
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Icons } from '@/components/icons'
-import { DestinationGrid } from '@/components/destinations/destination-grid'
-import { CreateDestinationDialog } from '@/components/destinations/create-destination-dialog'
-import apiClient from '@/lib/api'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Icons } from "@/components/icons";
+import { DestinationGrid } from "@/components/destinations/destination-grid";
+import { CreateDestinationDialog } from "@/components/destinations/create-destination-dialog";
+import apiClient from "@/lib/api";
 
 export default function DestinationsPage() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: destinations, isLoading } = useQuery({
-    queryKey: ['destinations'],
+    queryKey: ["destinations"],
     queryFn: () => apiClient.getDestinations(),
-  })
+  });
 
   return (
     <div className="space-y-6">
@@ -40,7 +46,7 @@ export default function DestinationsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DestinationGrid 
+          <DestinationGrid
             destinations={(destinations as any)?.data?.destinations || []}
             isLoading={isLoading}
           />
@@ -52,5 +58,5 @@ export default function DestinationsPage() {
         onOpenChange={setShowCreateDialog}
       />
     </div>
-  )
+  );
 }

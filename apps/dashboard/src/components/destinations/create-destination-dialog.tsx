@@ -1,131 +1,142 @@
-"use client"
+"use client";
 
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Icons } from '@/components/icons'
-import { useNotificationStore } from '@/stores/dashboard'
-import apiClient from '@/lib/api'
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Icons } from "@/components/icons";
+import { useNotificationStore } from "@/stores/dashboard";
+import apiClient from "@/lib/api";
 
 interface CreateDestinationDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const destinationTypes = [
   {
-    type: 'google_drive',
-    name: 'Google Drive',
+    type: "google_drive",
+    name: "Google Drive",
     icon: Icons.globe,
-    description: 'Store statements in Google Drive',
+    description: "Store statements in Google Drive",
   },
   {
-    type: 'dropbox',
-    name: 'Dropbox',
+    type: "dropbox",
+    name: "Dropbox",
     icon: Icons.upload,
-    description: 'Store statements in Dropbox',
+    description: "Store statements in Dropbox",
   },
   {
-    type: 'onedrive',
-    name: 'OneDrive',
+    type: "onedrive",
+    name: "OneDrive",
     icon: Icons.upload,
-    description: 'Store statements in Microsoft OneDrive',
+    description: "Store statements in Microsoft OneDrive",
   },
   {
-    type: 'webhook',
-    name: 'Webhook',
+    type: "webhook",
+    name: "Webhook",
     icon: Icons.link,
-    description: 'Send statements to a webhook URL',
+    description: "Send statements to a webhook URL",
   },
-]
+];
 
-export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinationDialogProps) {
-  const [step, setStep] = useState<'select' | 'configure'>('select')
-  const [selectedType, setSelectedType] = useState<string>('')
-  const [name, setName] = useState('')
-  const [folderPath, setFolderPath] = useState('/')
-  const [webhookUrl, setWebhookUrl] = useState('')
-  const [webhookSecret, setWebhookSecret] = useState('')
-  
-  const queryClient = useQueryClient()
-  const { addNotification } = useNotificationStore()
+export function CreateDestinationDialog({
+  open,
+  onOpenChange,
+}: CreateDestinationDialogProps) {
+  const [step, setStep] = useState<"select" | "configure">("select");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [name, setName] = useState("");
+  const [folderPath, setFolderPath] = useState("/");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
 
   const createMutation = useMutation({
     mutationFn: (destination: any) => apiClient.createDestination(destination),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['destinations'] })
+      queryClient.invalidateQueries({ queryKey: ["destinations"] });
       addNotification({
-        type: 'success',
-        title: 'Destination created',
-        description: 'Your destination has been successfully configured',
-      })
-      handleClose()
+        type: "success",
+        title: "Destination created",
+        description: "Your destination has been successfully configured",
+      });
+      handleClose();
     },
     onError: (error: any) => {
       addNotification({
-        type: 'error',
-        title: 'Creation failed',
-        description: error.message || 'Failed to create destination',
-      })
+        type: "error",
+        title: "Creation failed",
+        description: error.message || "Failed to create destination",
+      });
     },
-  })
+  });
 
   const handleClose = () => {
-    setStep('select')
-    setSelectedType('')
-    setName('')
-    setFolderPath('/')
-    setWebhookUrl('')
-    setWebhookSecret('')
-    onOpenChange(false)
-  }
+    setStep("select");
+    setSelectedType("");
+    setName("");
+    setFolderPath("/");
+    setWebhookUrl("");
+    setWebhookSecret("");
+    onOpenChange(false);
+  };
 
   const handleTypeSelect = (type: string) => {
-    setSelectedType(type)
-    setStep('configure')
-    
+    setSelectedType(type);
+    setStep("configure");
+
     // Set default name
-    const typeConfig = destinationTypes.find(t => t.type === type)
+    const typeConfig = destinationTypes.find((t) => t.type === type);
     if (typeConfig) {
-      setName(`My ${typeConfig.name}`)
+      setName(`My ${typeConfig.name}`);
     }
-  }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!name.trim()) {
       addNotification({
-        type: 'error',
-        title: 'Name required',
-        description: 'Please provide a name for this destination',
-      })
-      return
+        type: "error",
+        title: "Name required",
+        description: "Please provide a name for this destination",
+      });
+      return;
     }
 
-    let config: any = {}
+    let config: any = {};
 
-    if (selectedType === 'webhook') {
+    if (selectedType === "webhook") {
       if (!webhookUrl || !webhookSecret) {
         addNotification({
-          type: 'error',
-          title: 'Webhook configuration incomplete',
-          description: 'Please provide both URL and secret for webhook destination',
-        })
-        return
+          type: "error",
+          title: "Webhook configuration incomplete",
+          description:
+            "Please provide both URL and secret for webhook destination",
+        });
+        return;
       }
       config = {
         url: webhookUrl,
         secret: webhookSecret,
-        events: ['statement_delivered', 'statement_failed'],
-      }
+        events: ["statement_delivered", "statement_failed"],
+      };
     } else {
       // For cloud storage, config would be set during OAuth flow
       config = {
         folder_path: folderPath,
-      }
+      };
     }
 
     createMutation.mutate({
@@ -133,13 +144,13 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
       name: name.trim(),
       config,
       folder_path: folderPath,
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        {step === 'select' ? (
+        {step === "select" ? (
           <>
             <DialogHeader>
               <DialogTitle>Add Destination</DialogTitle>
@@ -150,7 +161,7 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
 
             <div className="grid gap-4">
               {destinationTypes.map((dest) => {
-                const IconComponent = dest.icon
+                const IconComponent = dest.icon;
                 return (
                   <button
                     key={dest.type}
@@ -164,18 +175,23 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{dest.name}</h4>
-                      <p className="text-sm text-muted-foreground">{dest.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {dest.description}
+                      </p>
                     </div>
                     <Icons.chevronRight className="h-4 w-4 text-muted-foreground" />
                   </button>
-                )
+                );
               })}
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Configure {destinationTypes.find(t => t.type === selectedType)?.name}</DialogTitle>
+              <DialogTitle>
+                Configure{" "}
+                {destinationTypes.find((t) => t.type === selectedType)?.name}
+              </DialogTitle>
               <DialogDescription>
                 Set up your destination configuration
               </DialogDescription>
@@ -195,7 +211,7 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                 />
               </div>
 
-              {selectedType !== 'webhook' && (
+              {selectedType !== "webhook" && (
                 <div className="space-y-2">
                   <label htmlFor="folder" className="text-sm font-medium">
                     Folder Path
@@ -212,10 +228,13 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                 </div>
               )}
 
-              {selectedType === 'webhook' && (
+              {selectedType === "webhook" && (
                 <>
                   <div className="space-y-2">
-                    <label htmlFor="webhook-url" className="text-sm font-medium">
+                    <label
+                      htmlFor="webhook-url"
+                      className="text-sm font-medium"
+                    >
                       Webhook URL
                     </label>
                     <Input
@@ -229,7 +248,10 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="webhook-secret" className="text-sm font-medium">
+                    <label
+                      htmlFor="webhook-secret"
+                      className="text-sm font-medium"
+                    >
                       Webhook Secret
                     </label>
                     <Input
@@ -240,14 +262,19 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      This secret will be used to sign webhook payloads for security
+                      This secret will be used to sign webhook payloads for
+                      security
                     </p>
                   </div>
                 </>
               )}
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setStep('select')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("select")}
+                >
                   Back
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
@@ -257,7 +284,7 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
                       Creating...
                     </>
                   ) : (
-                    'Create Destination'
+                    "Create Destination"
                   )}
                 </Button>
               </DialogFooter>
@@ -266,5 +293,5 @@ export function CreateDestinationDialog({ open, onOpenChange }: CreateDestinatio
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

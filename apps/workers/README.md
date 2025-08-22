@@ -7,7 +7,7 @@ Cloudflare Workers infrastructure for BankStatementRetriever MVP - pure serverle
 ### Core Components
 
 - **Main Worker** - API endpoints and request routing
-- **Queues** - Asynchronous statement retrieval and delivery processing  
+- **Queues** - Asynchronous statement retrieval and delivery processing
 - **Durable Objects** - Per-account coordination and rate limiting
 - **KV Storage** - Configuration and caching
 - **Cron Triggers** - Daily 2:00 AM ET polling per PRD
@@ -68,7 +68,7 @@ apps/workers/
 # Development
 ./deploy.sh development
 
-# Staging  
+# Staging
 ./deploy.sh staging
 
 # Production (requires confirmation)
@@ -115,7 +115,7 @@ Set via `wrangler secret put`:
 # Database
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Plaid Integration  
+# Plaid Integration
 PLAID_CLIENT_ID=your_client_id
 PLAID_SECRET=your_secret_key
 
@@ -135,10 +135,10 @@ WEBHOOK_SIGNING_SECRET=your_signing_secret
 
 ### Queues Configuration
 
-| Queue | Purpose | Batch Size | Timeout | Retries |
-|-------|---------|------------|---------|---------|
-| statement-retrieval-prod | Plaid polling jobs | 10 | 30s | 3 |
-| delivery-prod | File delivery jobs | 5 | 15s | 3 |
+| Queue                    | Purpose            | Batch Size | Timeout | Retries |
+| ------------------------ | ------------------ | ---------- | ------- | ------- |
+| statement-retrieval-prod | Plaid polling jobs | 10         | 30s     | 3       |
+| delivery-prod            | File delivery jobs | 5          | 15s     | 3       |
 
 ## 🔄 Queue Processing
 
@@ -163,19 +163,19 @@ WEBHOOK_SIGNING_SECRET=your_signing_secret
 
 Per PRD Section 8:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Service health check |
-| GET | `/health/deep` | Detailed health with dependencies |
-| POST | `/api/plaid/link-token` | Create Plaid Link token |
-| POST | `/api/plaid/exchange-public-token` | Exchange public token |
-| GET | `/api/accounts` | List accounts with pagination |
-| DELETE | `/api/accounts/:id` | Deactivate account |
-| GET | `/api/statements/:accountId` | Statement history |
-| POST | `/api/accounts/:id/sync` | Manual statement sync |
-| POST | `/api/accounts/:id/backfill` | Historical backfill |
-| POST | `/webhooks/plaid` | Plaid webhook receiver |
-| POST | `/webhooks/stripe` | Stripe webhook receiver |
+| Method | Endpoint                           | Description                       |
+| ------ | ---------------------------------- | --------------------------------- |
+| GET    | `/health`                          | Service health check              |
+| GET    | `/health/deep`                     | Detailed health with dependencies |
+| POST   | `/api/plaid/link-token`            | Create Plaid Link token           |
+| POST   | `/api/plaid/exchange-public-token` | Exchange public token             |
+| GET    | `/api/accounts`                    | List accounts with pagination     |
+| DELETE | `/api/accounts/:id`                | Deactivate account                |
+| GET    | `/api/statements/:accountId`       | Statement history                 |
+| POST   | `/api/accounts/:id/sync`           | Manual statement sync             |
+| POST   | `/api/accounts/:id/backfill`       | Historical backfill               |
+| POST   | `/webhooks/plaid`                  | Plaid webhook receiver            |
+| POST   | `/webhooks/stripe`                 | Stripe webhook receiver           |
 
 ## 📊 Monitoring
 
@@ -185,7 +185,7 @@ Per PRD Section 8:
 # Basic health
 curl https://api.bankstatementretriever.com/health
 
-# Deep health with dependencies  
+# Deep health with dependencies
 curl https://api.bankstatementretriever.com/health/deep
 ```
 
@@ -239,7 +239,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### Edge Computing Benefits
 
 - **Global Distribution** - Low latency worldwide
-- **Auto Scaling** - Handles traffic spikes automatically  
+- **Auto Scaling** - Handles traffic spikes automatically
 - **Zero Infrastructure Management** - No servers to maintain
 
 ### Resource Limits

@@ -23,7 +23,13 @@
     "type": "git",
     "url": "git+https://github.com/bmazz731/bankstatementretriever.git"
   },
-  "keywords": ["bank", "statements", "automation", "plaid", "saas"],
+  "keywords": [
+    "bank",
+    "statements",
+    "automation",
+    "plaid",
+    "saas"
+  ],
   "author": "Brandon Mazzella",
   "license": "UNLICENSED",
   "bugs": {

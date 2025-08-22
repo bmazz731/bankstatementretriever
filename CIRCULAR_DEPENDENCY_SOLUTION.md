@@ -3,18 +3,22 @@
 ## Problem Analysis
 
 ### Confirmed Circular Dependency
+
 From database schema analysis (`/home/brandon/bankstatementretriever/deploy/database-migration.sql`):
 
 1. **Line 192-193**: `users.org_id` → FK → `organizations.id` (immediate constraint)
 2. **Line 195-196**: `organizations.owner_user_id` → FK → `users.id` (DEFERRABLE INITIALLY DEFERRED)
 
 ### Root Cause
+
 In `/home/brandon/bankstatementretriever/apps/workers/src/lib/auth.ts` line 38:
+
 ```typescript
-org_id: (user as any).org_id || user.id
+org_id: (user as any).org_id || user.id;
 ```
 
 This creates a scenario where:
+
 - User is authenticated with `org_id = user.id` (when no org exists)
 - Code tries to create organization with `id = user.id` AND `owner_user_id = user.id`
 - The user referenced by `owner_user_id` doesn't exist in the database yet
@@ -25,6 +29,7 @@ This creates a scenario where:
 ### 1. Primary Solution: Transaction with Deferred Constraints
 
 **Database Function** (`/home/brandon/bankstatementretriever/deploy/circular-dependency-fix.sql`):
+
 ```sql
 CREATE OR REPLACE FUNCTION create_user_and_organization(
   p_user_id UUID,
@@ -36,6 +41,7 @@ CREATE OR REPLACE FUNCTION create_user_and_organization(
 ```
 
 This function:
+
 - Uses the existing `DEFERRABLE INITIALLY DEFERRED` constraint on `organizations.owner_user_id`
 - Creates both records in a single transaction
 - Constraint validation is deferred until transaction commit
@@ -44,6 +50,7 @@ This function:
 ### 2. Fallback Solution: NULL-Owner Approach
 
 When the RPC function doesn't exist, the code falls back to:
+
 1. Create organization with `owner_user_id = NULL` (temporarily)
 2. Create user with `org_id` referencing the organization
 3. Update organization with `owner_user_id = user.id`
@@ -53,31 +60,39 @@ When the RPC function doesn't exist, the code falls back to:
 ### 3. Updated Implementation Files
 
 **File**: `/home/brandon/bankstatementretriever/apps/workers/src/routes/plaid.ts`
+
 - Lines 327-460: Updated user/organization creation logic
 - Primary: Uses RPC function for transaction-based approach
 - Fallback: Uses sequential creation with NULL owner
 
 **File**: `/home/brandon/bankstatementretriever/apps/workers/src/lib/user-setup.ts`
+
 - Lines 66-191: Updated `ensureUserAndOrganization` function
 - Same dual approach: RPC function primary, sequential fallback
 
 ## Deployment Steps
 
 ### 1. Apply Database Migration
+
 Execute in Supabase SQL Editor:
+
 ```sql
 -- Apply the circular dependency fix
 \i /path/to/circular-dependency-fix.sql
 ```
 
 ### 2. Deploy Worker Code
+
 The updated worker code is already implemented and will:
+
 - Try the RPC function first (transaction approach)
 - Fall back to sequential approach if RPC doesn't exist
 - Generate unique org IDs to avoid self-reference issues
 
 ### 3. Verification
+
 Run test script to verify:
+
 ```bash
 node /home/brandon/bankstatementretriever/apps/workers/test-database-fix.js
 ```

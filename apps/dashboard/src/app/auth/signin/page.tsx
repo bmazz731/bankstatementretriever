@@ -1,85 +1,93 @@
-"use client"
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { createSupabaseClient } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Icons } from '@/components/icons'
-import { useNotificationStore } from '@/stores/dashboard'
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createSupabaseClient } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Icons } from "@/components/icons";
+import { useNotificationStore } from "@/stores/dashboard";
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createSupabaseClient()
-  const { addNotification } = useNotificationStore()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createSupabaseClient();
+  const { addNotification } = useNotificationStore();
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
       if (error) {
         addNotification({
-          type: 'error',
-          title: 'Sign in failed',
+          type: "error",
+          title: "Sign in failed",
           description: error.message,
-        })
+        });
       } else {
-        router.push('/dashboard')
+        router.push("/dashboard");
       }
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Sign in failed',
-        description: 'An unexpected error occurred',
-      })
+        type: "error",
+        title: "Sign in failed",
+        description: "An unexpected error occurred",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true)
+    setIsGoogleLoading(true);
 
     try {
       // Safe way to get origin
-      const origin = typeof window !== 'undefined' ? window.location.origin : ''
-      
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${origin}/auth/callback`,
         },
-      })
+      });
 
       if (error) {
         addNotification({
-          type: 'error',
-          title: 'Google sign in failed',
+          type: "error",
+          title: "Google sign in failed",
           description: error.message,
-        })
+        });
       }
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Google sign in failed',
-        description: 'An unexpected error occurred',
-      })
+        type: "error",
+        title: "Google sign in failed",
+        description: "An unexpected error occurred",
+      });
     } finally {
-      setIsGoogleLoading(false)
+      setIsGoogleLoading(false);
     }
-  }
+  };
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
@@ -117,7 +125,7 @@ export default function SignInPage() {
                 )}
                 Continue with Google
               </Button>
-              
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -157,7 +165,7 @@ export default function SignInPage() {
                 )}
                 Sign in
               </Button>
-              
+
               <div className="text-center text-sm">
                 <Link
                   href="/auth/forgot-password"
@@ -166,9 +174,9 @@ export default function SignInPage() {
                   Forgot your password?
                 </Link>
               </div>
-              
+
               <div className="text-center text-sm">
-                Don&apos;t have an account?{' '}
+                Don&apos;t have an account?{" "}
                 <Link
                   href="/auth/signup"
                   className="text-primary hover:underline"
@@ -181,5 +189,5 @@ export default function SignInPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

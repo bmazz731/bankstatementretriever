@@ -3,6 +3,7 @@
 ## Required Environment Variables
 
 ### 1. Cloudflare Workers (API)
+
 Set these secrets using `wrangler secret put <name>`:
 
 ```bash
@@ -19,6 +20,7 @@ wrangler secret put PLAID_WEBHOOK_SECRET
 ```
 
 ### 2. Vercel (Dashboard)
+
 Set these environment variables in Vercel dashboard:
 
 ```env
@@ -28,6 +30,7 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 3. Development Environment
+
 Create `.env.local` in project root:
 
 ```env
@@ -59,6 +62,7 @@ DOMAIN=bankstatementretriever.com
 ## Validation
 
 Run the test suite to validate configuration:
+
 ```bash
 node scripts/test-plaid-integration.js
 ```

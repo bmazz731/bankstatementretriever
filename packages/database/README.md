@@ -7,7 +7,7 @@ Database package for BankStatementRetriever MVP using Prisma and Supabase.
 Complete PostgreSQL schema implementing all entities from PRD Section 7:
 
 - **Organizations** - Single owner per account (MVP)
-- **Users** - Auth and org membership 
+- **Users** - Auth and org membership
 - **Connections** - Plaid Items (bank institution connections)
 - **Accounts** - Individual bank accounts with statement support
 - **Statements** - Deduplication ledger with versioning
@@ -23,12 +23,14 @@ Complete PostgreSQL schema implementing all entities from PRD Section 7:
 ## 🚀 Setup Instructions
 
 ### Option 1: Quick Setup (Recommended)
+
 ```bash
 cd packages/database
 ./setup.sh
 ```
 
 ### Option 2: Manual Setup
+
 ```bash
 # Install dependencies
 npm install
@@ -44,8 +46,9 @@ npm run db:seed
 ```
 
 ### Option 3: Supabase SQL Editor (Current Requirement)
+
 1. Go to your Supabase Dashboard
-2. Navigate to SQL Editor  
+2. Navigate to SQL Editor
 3. Copy and paste `supabase-migration.sql`
 4. Execute the migration
 
@@ -81,32 +84,50 @@ npm run typecheck       # TypeScript validation
 ## 📊 Key Features
 
 ### Deduplication System
+
 Per PRD Section 4.3, statements are deduplicated using:
+
 ```typescript
 // Unique constraint: (account_id, period_end, file_type, version)
-const existing = await statementQueries.checkDuplicate(accountId, periodEnd, fileType)
-const version = existing ? existing.version + 1 : 1
+const existing = await statementQueries.checkDuplicate(
+  accountId,
+  periodEnd,
+  fileType,
+);
+const version = existing ? existing.version + 1 : 1;
 ```
 
 ### Idempotency
+
 All deliveries use `request_id` for safe retries:
+
 ```typescript
-const delivery = await deliveryQueries.findByRequestId(requestId)
-if (delivery) return delivery // Already processed
+const delivery = await deliveryQueries.findByRequestId(requestId);
+if (delivery) return delivery; // Already processed
 ```
 
 ### Audit Logging
+
 Comprehensive tracking per PRD Section 15.5:
+
 ```typescript
-await auditQueries.log(orgId, 'statement_retrieved', userId, statementId, metadata)
+await auditQueries.log(
+  orgId,
+  "statement_retrieved",
+  userId,
+  statementId,
+  metadata,
+);
 ```
 
 ### Row Level Security (RLS)
+
 Supabase RLS policies ensure users only access their organization's data.
 
 ## 🧪 Test Data
 
 The seed script creates:
+
 - 1 test organization (Professional plan)
 - 1 test user (`test@bankstatementretriever.com`)
 - 1 bank connection (First Platypus Bank)
@@ -118,21 +139,24 @@ The seed script creates:
 ## 🔗 Usage Examples
 
 ```typescript
-import { prisma, accountQueries, statementQueries } from '@bsr/database'
+import { prisma, accountQueries, statementQueries } from "@bsr/database";
 
 // Get organization's accounts with pagination
-const accounts = await accountQueries.findByOrg(orgId, { page: 1, pageSize: 20 })
+const accounts = await accountQueries.findByOrg(orgId, {
+  page: 1,
+  pageSize: 20,
+});
 
 // Create statement with deduplication
 const statement = await statementQueries.createWithDeduplication({
   account_id: accountId,
-  period_end: new Date('2024-01-31'),
-  file_type: 'pdf',
-  checksum: 'sha256:abc123...'
-})
+  period_end: new Date("2024-01-31"),
+  file_type: "pdf",
+  checksum: "sha256:abc123...",
+});
 
 // Check database health
-const health = await healthQueries.check()
+const health = await healthQueries.check();
 ```
 
 ## 🏗️ Development Notes
@@ -153,6 +177,7 @@ const health = await healthQueries.check()
 ## Next Steps
 
 After database setup:
+
 1. Run seed data to get test environment
 2. Use `npm run db:studio` to browse data
 3. Import `@bsr/database` in other packages

@@ -1,57 +1,61 @@
-"use client"
+"use client";
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Icons } from '@/components/icons'
-import { getStatusColor, formatRelativeTime } from '@/lib/utils'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNotificationStore } from '@/stores/dashboard'
-import apiClient from '@/lib/api'
-import type { Destination } from '@/types'
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icons } from "@/components/icons";
+import { getStatusColor, formatRelativeTime } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNotificationStore } from "@/stores/dashboard";
+import apiClient from "@/lib/api";
+import type { Destination } from "@/types";
 
 interface DestinationGridProps {
-  destinations: Destination[]
-  isLoading: boolean
+  destinations: Destination[];
+  isLoading: boolean;
 }
 
 function getDestinationIcon(type: string) {
   switch (type) {
-    case 'google_drive':
-      return Icons.globe
-    case 'dropbox':
-      return Icons.upload
-    case 'onedrive':
-      return Icons.upload
-    case 'webhook':
-      return Icons.link
+    case "google_drive":
+      return Icons.globe;
+    case "dropbox":
+      return Icons.upload;
+    case "onedrive":
+      return Icons.upload;
+    case "webhook":
+      return Icons.link;
     default:
-      return Icons.upload
+      return Icons.upload;
   }
 }
 
-export function DestinationGrid({ destinations, isLoading }: DestinationGridProps) {
-  const queryClient = useQueryClient()
-  const { addNotification } = useNotificationStore()
+export function DestinationGrid({
+  destinations,
+  isLoading,
+}: DestinationGridProps) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
 
   const testMutation = useMutation({
-    mutationFn: (destinationId: string) => apiClient.testWebhookDestination(destinationId),
+    mutationFn: (destinationId: string) =>
+      apiClient.testWebhookDestination(destinationId),
     onSuccess: (data, destinationId) => {
-      queryClient.invalidateQueries({ queryKey: ['destinations'] })
+      queryClient.invalidateQueries({ queryKey: ["destinations"] });
       addNotification({
-        type: data.data?.success ? 'success' : 'error',
-        title: data.data?.success ? 'Test successful' : 'Test failed',
-        description: data.data?.message || 'Destination test completed',
-      })
+        type: data.data?.success ? "success" : "error",
+        title: data.data?.success ? "Test successful" : "Test failed",
+        description: data.data?.message || "Destination test completed",
+      });
     },
     onError: (error: any) => {
       addNotification({
-        type: 'error',
-        title: 'Test failed',
-        description: error.message || 'Failed to test destination',
-      })
+        type: "error",
+        title: "Test failed",
+        description: error.message || "Failed to test destination",
+      });
     },
-  })
+  });
 
   if (isLoading) {
     return (
@@ -68,14 +72,16 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
           </Card>
         ))}
       </div>
-    )
+    );
   }
 
   if (!destinations || destinations.length === 0) {
     return (
       <div className="text-center py-8">
         <Icons.upload className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">No destinations configured</h3>
+        <h3 className="mt-4 text-lg font-semibold">
+          No destinations configured
+        </h3>
         <p className="mt-2 text-sm text-muted-foreground">
           Add your first storage destination to start delivering statements
         </p>
@@ -84,14 +90,14 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
           Add Destination
         </Button>
       </div>
-    )
+    );
   }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {destinations.map((destination) => {
-        const statusColor = getStatusColor(destination.status)
-        const IconComponent = getDestinationIcon(destination.type)
+        const statusColor = getStatusColor(destination.status);
+        const IconComponent = getDestinationIcon(destination.type);
 
         return (
           <Card key={destination.id} className="relative overflow-hidden">
@@ -106,15 +112,19 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium truncate">{destination.name}</h4>
                     <p className="text-sm text-muted-foreground capitalize">
-                      {destination.type.replace('_', ' ')}
+                      {destination.type.replace("_", " ")}
                     </p>
                   </div>
                 </div>
                 <Badge
                   variant={
-                    statusColor === 'green' ? 'success' :
-                    statusColor === 'yellow' ? 'warning' :
-                    statusColor === 'red' ? 'error' : 'secondary'
+                    statusColor === "green"
+                      ? "success"
+                      : statusColor === "yellow"
+                        ? "warning"
+                        : statusColor === "red"
+                          ? "error"
+                          : "secondary"
                   }
                 >
                   {destination.status}
@@ -125,7 +135,9 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
                 {destination.folder_path && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Folder:</span>
-                    <span className="truncate max-w-[150px]">{destination.folder_path}</span>
+                    <span className="truncate max-w-[150px]">
+                      {destination.folder_path}
+                    </span>
                   </div>
                 )}
 
@@ -143,7 +155,7 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
               </div>
 
               <div className="mt-4 flex space-x-2">
-                {destination.type === 'webhook' && (
+                {destination.type === "webhook" && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -168,7 +180,7 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
                 </Button>
               </div>
 
-              {destination.status === 'error' && (
+              {destination.status === "error" && (
                 <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                   <p className="text-xs text-red-800 dark:text-red-200">
                     <Icons.warning className="inline mr-1 h-3 w-3" />
@@ -178,8 +190,8 @@ export function DestinationGrid({ destinations, isLoading }: DestinationGridProp
               )}
             </CardContent>
           </Card>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

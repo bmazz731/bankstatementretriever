@@ -8,36 +8,36 @@
 export async function verifyWebhookSignature(
   payload: string,
   signature: string,
-  secret: string
+  secret: string,
 ): Promise<boolean> {
   try {
     // Import secret key
-    const encoder = new TextEncoder()
+    const encoder = new TextEncoder();
     const secretKey = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
+      { name: "HMAC", hash: "SHA-256" },
       false,
-      ['sign']
-    )
+      ["sign"],
+    );
 
     // Sign the payload
     const signatureBuffer = await crypto.subtle.sign(
-      'HMAC',
+      "HMAC",
       secretKey,
-      encoder.encode(payload)
-    )
+      encoder.encode(payload),
+    );
 
     // Convert to hex
     const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
     // Compare signatures (constant time)
-    return signature === expectedSignature
+    return signature === expectedSignature;
   } catch (error) {
-    console.error('Webhook signature verification failed:', error)
-    return false
+    console.error("Webhook signature verification failed:", error);
+    return false;
   }
 }
 
@@ -47,8 +47,8 @@ export async function verifyWebhookSignature(
 export async function verifyPlaidWebhookSignature(
   payload: string,
   signature: string,
-  secret: string
+  secret: string,
 ): Promise<boolean> {
   // Plaid uses SHA-256 HMAC with hex encoding
-  return verifyWebhookSignature(payload, signature, secret)
+  return verifyWebhookSignature(payload, signature, secret);
 }

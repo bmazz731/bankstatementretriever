@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { useEffect, useState, ReactNode } from 'react'
+import { useEffect, useState, ReactNode } from "react";
 
 interface ClientOnlyProps {
-  children: ReactNode
-  fallback?: ReactNode
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 export function ClientOnly({ children, fallback = null }: ClientOnlyProps) {
-  const [hasMounted, setHasMounted] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true)
-  }, [])
+    setHasMounted(true);
+  }, []);
 
   if (!hasMounted) {
-    return <div suppressHydrationWarning>{fallback}</div>
+    return <div suppressHydrationWarning>{fallback}</div>;
   }
 
-  return <div suppressHydrationWarning>{children}</div>
+  return <div suppressHydrationWarning>{children}</div>;
 }

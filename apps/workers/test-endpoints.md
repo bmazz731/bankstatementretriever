@@ -3,10 +3,12 @@
 This document lists the simplified API endpoints available in the MVP deployment.
 
 ## Health Check
+
 - `GET /health` - Basic health check
 - `GET /api/health` - Additional health endpoint
 
 ## Authentication (Stub Implementation)
+
 - `POST /api/auth/signup` - Create account (accepts any email/password)
 - `POST /api/auth/signin` - Sign in (accepts any email/password)
 - `POST /api/auth/google/callback` - Google OAuth callback (stub)
@@ -18,6 +20,7 @@ This document lists the simplified API endpoints available in the MVP deployment
 - `POST /api/auth/refresh` - Refresh token
 
 ## Plaid Integration (Stub Implementation)
+
 - `POST /api/plaid/webhook` - Plaid webhook endpoint
 - `POST /api/plaid/link_token` - Create Plaid Link token (requires auth)
 - `POST /api/plaid/exchange_public_token` - Exchange public token (requires auth)
@@ -27,6 +30,7 @@ This document lists the simplified API endpoints available in the MVP deployment
 - `POST /api/plaid/check_statements/:accountId` - Manual statement check (requires auth)
 
 ## Storage (Stub Implementation)
+
 - `GET /api/storage/providers` - Get storage providers (requires auth)
 - `POST /api/storage/connect/:providerId` - Connect storage provider (requires auth)
 - `POST /api/storage/upload` - Upload statement (requires auth)

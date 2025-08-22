@@ -1,9 +1,11 @@
 # BankStatementRetriever MVP - Orchestration Plan
 
 ## Overview
+
 This document outlines the implementation approach for the BankStatementRetriever MVP, based on the PRD requirements.
 
 ## Simplified Architecture
+
 - **Frontend**: Next.js dashboard on Vercel
 - **Backend**: Cloudflare Workers for API and processing
 - **Database**: Supabase for auth and data
@@ -12,28 +14,34 @@ This document outlines the implementation approach for the BankStatementRetrieve
 ## Implementation Phases
 
 ### Phase 1: Foundation (Current)
+
 **Status**: In Progress
 **Duration**: 3-5 days
 
 Tasks:
+
 1. ✅ GitHub repository setup
 2. ⏳ Supabase project initialization
 3. ⏳ Cloudflare Workers setup
 4. ⏳ Basic authentication flow
 
 ### Phase 2: Core Functionality
+
 **Duration**: 5-7 days
 
 Tasks:
+
 1. Plaid integration for bank linking
 2. Statement polling mechanism (2 AM ET daily)
 3. File delivery to Google Drive
 4. Webhook destination with HMAC signing
 
 ### Phase 3: User Experience
+
 **Duration**: 5-7 days
 
 Tasks:
+
 1. Dashboard for connection management
 2. Manual sync and backfill features
 3. Email notifications
@@ -42,6 +50,7 @@ Tasks:
 ## Agent Coordination
 
 ### Current Focus
+
 The orchestrator is currently working on Phase 1 foundation tasks. The next steps are:
 
 1. **Database Setup** - Create Supabase schema based on PRD Section 7
@@ -51,6 +60,7 @@ The orchestrator is currently working on Phase 1 foundation tasks. The next step
 ### Integration Points
 
 Each component has clear interfaces:
+
 - Dashboard → Workers API (REST)
 - Workers → Supabase (Database)
 - Workers → Plaid (Statements)

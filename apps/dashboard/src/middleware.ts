@@ -1,31 +1,31 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Public routes that don't require authentication
 const publicRoutes = [
-  '/auth/signin',
-  '/auth/signup',
-  '/auth/callback',
-  '/auth/forgot-password',
-  '/auth/magic-link',
-]
+  "/auth/signin",
+  "/auth/signup",
+  "/auth/callback",
+  "/auth/forgot-password",
+  "/auth/magic-link",
+];
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
 
   // Allow public routes
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.next()
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
   }
 
   // Allow static files and API routes
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
-    return NextResponse.next()
+  if (pathname.startsWith("/_next") || pathname.startsWith("/api")) {
+    return NextResponse.next();
   }
 
   // For protected routes, we'll handle auth check on the client side
   // This is because Supabase auth needs to be checked in the browser
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
@@ -36,6 +36,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
-}
+};

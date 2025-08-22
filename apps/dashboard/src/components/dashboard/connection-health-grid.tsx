@@ -1,42 +1,45 @@
-"use client"
+"use client";
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Icons } from '@/components/icons'
-import { getStatusColor, formatRelativeTime } from '@/lib/utils'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNotificationStore } from '@/stores/dashboard'
-import apiClient from '@/lib/api'
-import type { Account } from '@/types'
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icons } from "@/components/icons";
+import { getStatusColor, formatRelativeTime } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNotificationStore } from "@/stores/dashboard";
+import apiClient from "@/lib/api";
+import type { Account } from "@/types";
 
 interface ConnectionHealthGridProps {
-  accounts: Account[]
-  isLoading: boolean
+  accounts: Account[];
+  isLoading: boolean;
 }
 
-export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGridProps) {
-  const queryClient = useQueryClient()
-  const { addNotification } = useNotificationStore()
+export function ConnectionHealthGrid({
+  accounts,
+  isLoading,
+}: ConnectionHealthGridProps) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
 
   const syncMutation = useMutation({
     mutationFn: (accountId: string) => apiClient.syncAccount(accountId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
       addNotification({
-        type: 'success',
-        title: 'Sync started',
-        description: 'Account sync has been queued successfully',
-      })
+        type: "success",
+        title: "Sync started",
+        description: "Account sync has been queued successfully",
+      });
     },
     onError: (error: any) => {
       addNotification({
-        type: 'error',
-        title: 'Sync failed',
-        description: error.message || 'Failed to start account sync',
-      })
+        type: "error",
+        title: "Sync failed",
+        description: error.message || "Failed to start account sync",
+      });
     },
-  })
+  });
 
   if (isLoading) {
     return (
@@ -53,7 +56,7 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
           </Card>
         ))}
       </div>
-    )
+    );
   }
 
   if (!accounts || accounts.length === 0) {
@@ -69,15 +72,16 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
           Connect Bank Account
         </Button>
       </div>
-    )
+    );
   }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {accounts.map((account) => {
-        const statusColor = getStatusColor(account.status)
-        const connectionStatus = account.connection?.status || 'unknown'
-        const lastSync = account.last_statement_check || account.connection?.last_sync
+        const statusColor = getStatusColor(account.status);
+        const connectionStatus = account.connection?.status || "unknown";
+        const lastSync =
+          account.last_statement_check || account.connection?.last_sync;
 
         return (
           <Card key={account.id} className="relative overflow-hidden">
@@ -96,9 +100,13 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
                 </div>
                 <Badge
                   variant={
-                    statusColor === 'green' ? 'success' :
-                    statusColor === 'yellow' ? 'warning' :
-                    statusColor === 'red' ? 'error' : 'secondary'
+                    statusColor === "green"
+                      ? "success"
+                      : statusColor === "yellow"
+                        ? "warning"
+                        : statusColor === "red"
+                          ? "error"
+                          : "secondary"
                   }
                   className="ml-2"
                 >
@@ -110,18 +118,26 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Connection:</span>
                   <div className="flex items-center space-x-1">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus === 'active' ? 'bg-green-500' :
-                      connectionStatus === 'reauth_required' ? 'bg-yellow-500' :
-                      'bg-red-500'
-                    }`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        connectionStatus === "active"
+                          ? "bg-green-500"
+                          : connectionStatus === "reauth_required"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                    />
                     <span className="capitalize">{connectionStatus}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Statements:</span>
-                  <span>{account.statements_supported ? 'Supported' : 'Not supported'}</span>
+                  <span>
+                    {account.statements_supported
+                      ? "Supported"
+                      : "Not supported"}
+                  </span>
                 </div>
 
                 {lastSync && (
@@ -152,7 +168,7 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
                 </Button>
               </div>
 
-              {connectionStatus === 'reauth_required' && (
+              {connectionStatus === "reauth_required" && (
                 <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                   <p className="text-xs text-yellow-800 dark:text-yellow-200">
                     <Icons.warning className="inline mr-1 h-3 w-3" />
@@ -171,8 +187,8 @@ export function ConnectionHealthGrid({ accounts, isLoading }: ConnectionHealthGr
               )}
             </CardContent>
           </Card>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

@@ -1,27 +1,37 @@
-"use client"
+"use client";
 
-import { useQuery } from '@tanstack/react-query'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Icons } from '@/components/icons'
-import { formatDate } from '@/lib/utils'
-import apiClient from '@/lib/api'
-import type { Account } from '@/types'
+import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Icons } from "@/components/icons";
+import { formatDate } from "@/lib/utils";
+import apiClient from "@/lib/api";
+import type { Account } from "@/types";
 
 interface AccountStatementsDialogProps {
-  account: Account
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  account: Account;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function AccountStatementsDialog({ account, open, onOpenChange }: AccountStatementsDialogProps) {
+export function AccountStatementsDialog({
+  account,
+  open,
+  onOpenChange,
+}: AccountStatementsDialogProps) {
   const { data: statements, isLoading } = useQuery({
-    queryKey: ['statements', account.id],
+    queryKey: ["statements", account.id],
     queryFn: () => apiClient.getStatements(account.id),
     enabled: open,
-  })
+  });
 
-  const statementData = statements?.data?.statements || []
+  const statementData = statements?.data?.statements || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,7 +58,9 @@ export function AccountStatementsDialog({ account, open, onOpenChange }: Account
           ) : statementData.length === 0 ? (
             <div className="text-center py-8">
               <Icons.file className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No statements found</h3>
+              <h3 className="mt-4 text-lg font-semibold">
+                No statements found
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 No statements have been retrieved for this account yet
               </p>
@@ -56,19 +68,27 @@ export function AccountStatementsDialog({ account, open, onOpenChange }: Account
           ) : (
             <div className="space-y-3">
               {statementData.map((statement: any) => (
-                <div key={statement.statement_id} className="border rounded-lg p-3">
+                <div
+                  key={statement.statement_id}
+                  className="border rounded-lg p-3"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
                         <h4 className="font-medium">
                           {formatDate(statement.statement_date)}
                         </h4>
-                        <Badge variant={statement.delivered ? 'success' : 'secondary'}>
-                          {statement.delivered ? 'Delivered' : 'Pending'}
+                        <Badge
+                          variant={
+                            statement.delivered ? "success" : "secondary"
+                          }
+                        >
+                          {statement.delivered ? "Delivered" : "Pending"}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Period: {formatDate(statement.period_start)} - {formatDate(statement.period_end)}
+                        Period: {formatDate(statement.period_start)} -{" "}
+                        {formatDate(statement.period_end)}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Type: {statement.file_type.toUpperCase()}
@@ -86,5 +106,5 @@ export function AccountStatementsDialog({ account, open, onOpenChange }: Account
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

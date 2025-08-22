@@ -1,14 +1,20 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Icons } from '@/components/icons'
-import { useAuthStore } from '@/stores/auth'
-import { HydrationBoundary } from '@/components/hydration-boundary'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Icons } from "@/components/icons";
+import { useAuthStore } from "@/stores/auth";
+import { HydrationBoundary } from "@/components/hydration-boundary";
 
 export default function SettingsPage() {
-  const { user } = useAuthStore()
+  const { user } = useAuthStore();
 
   return (
     <div className="space-y-6">
@@ -23,31 +29,31 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
-            <CardDescription>
-              Update your personal information
-            </CardDescription>
+            <CardDescription>Update your personal information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <HydrationBoundary fallback={
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Full Name</label>
-                  <Input placeholder="Loading..." disabled />
+            <HydrationBoundary
+              fallback={
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Full Name</label>
+                    <Input placeholder="Loading..." disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Email</label>
+                    <Input placeholder="Loading..." disabled />
+                  </div>
+                  <Button disabled>Loading...</Button>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Email</label>
-                  <Input placeholder="Loading..." disabled />
-                </div>
-                <Button disabled>Loading...</Button>
-              </div>
-            }>
+              }
+            >
               <div className="space-y-2">
                 <label className="text-sm font-medium">Full Name</label>
-                <Input defaultValue={user?.full_name || ''} />
+                <Input defaultValue={user?.full_name || ""} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
-                <Input defaultValue={user?.email || ''} disabled />
+                <Input defaultValue={user?.email || ""} disabled />
               </div>
               <Button>Save Changes</Button>
             </HydrationBoundary>
@@ -57,9 +63,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Security</CardTitle>
-            <CardDescription>
-              Manage your security settings
-            </CardDescription>
+            <CardDescription>Manage your security settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full justify-start">
@@ -76,9 +80,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>API Access</CardTitle>
-            <CardDescription>
-              Manage API keys and webhooks
-            </CardDescription>
+            <CardDescription>Manage API keys and webhooks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border p-3 bg-muted/50">
@@ -104,7 +106,10 @@ export default function SettingsPage() {
               <Icons.download className="mr-2 h-4 w-4" />
               Export My Data
             </Button>
-            <Button variant="outline" className="w-full justify-start text-destructive">
+            <Button
+              variant="outline"
+              className="w-full justify-start text-destructive"
+            >
               <Icons.trash className="mr-2 h-4 w-4" />
               Delete Account
             </Button>
@@ -112,5 +117,5 @@ export default function SettingsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

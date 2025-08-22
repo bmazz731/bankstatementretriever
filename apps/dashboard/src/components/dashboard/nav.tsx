@@ -1,45 +1,45 @@
-"use client"
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { Icons } from '@/components/icons'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Icons } from "@/components/icons";
 
 const navItems = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
+    title: "Dashboard",
+    href: "/dashboard",
     icon: Icons.home,
   },
   {
-    title: 'Accounts',
-    href: '/dashboard/accounts',
+    title: "Accounts",
+    href: "/dashboard/accounts",
     icon: Icons.building,
   },
   {
-    title: 'Destinations',
-    href: '/dashboard/destinations',
+    title: "Destinations",
+    href: "/dashboard/destinations",
     icon: Icons.upload,
   },
   {
-    title: 'Activity',
-    href: '/dashboard/activity',
+    title: "Activity",
+    href: "/dashboard/activity",
     icon: Icons.activity,
   },
   {
-    title: 'Billing',
-    href: '/dashboard/billing',
+    title: "Billing",
+    href: "/dashboard/billing",
     icon: Icons.billing,
   },
   {
-    title: 'Settings',
-    href: '/dashboard/settings',
+    title: "Settings",
+    href: "/dashboard/settings",
     icon: Icons.settings,
   },
-]
+];
 
 export function DashboardNav() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav className="w-64 bg-card border-r border-border flex flex-col">
@@ -53,9 +53,10 @@ export function DashboardNav() {
       <div className="flex-1 px-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-              (item.href !== '/dashboard' && pathname.startsWith(item.href))
-            
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
             return (
               <li key={item.href}>
                 <Link
@@ -64,14 +65,14 @@ export function DashboardNav() {
                     "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
                   )}
                 >
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
                 </Link>
               </li>
-            )
+            );
           })}
         </ul>
       </div>
@@ -90,5 +91,5 @@ export function DashboardNav() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

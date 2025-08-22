@@ -1,41 +1,65 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Icons } from '@/components/icons'
-import { formatCurrency } from '@/lib/utils'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Icons } from "@/components/icons";
+import { formatCurrency } from "@/lib/utils";
 
 const plans = [
   {
-    name: 'Free',
+    name: "Free",
     price: 0,
     accounts: 1,
-    features: ['1 statement pull per month', 'Basic support', 'Email notifications'],
+    features: [
+      "1 statement pull per month",
+      "Basic support",
+      "Email notifications",
+    ],
     current: true,
   },
   {
-    name: 'Business',
+    name: "Business",
     price: 19,
     accounts: 5,
-    features: ['Daily checks', 'Priority support', 'All storage providers', 'Webhooks'],
+    features: [
+      "Daily checks",
+      "Priority support",
+      "All storage providers",
+      "Webhooks",
+    ],
     current: false,
   },
   {
-    name: 'Professional',
+    name: "Professional",
     price: 49,
     accounts: 20,
-    features: ['Everything in Business', 'Advanced scheduling', 'API access', 'Custom routing'],
+    features: [
+      "Everything in Business",
+      "Advanced scheduling",
+      "API access",
+      "Custom routing",
+    ],
     current: false,
   },
   {
-    name: 'Agency',
+    name: "Agency",
     price: 99,
     accounts: 50,
-    features: ['Everything in Professional', 'Multi-org management', 'White-label options'],
+    features: [
+      "Everything in Professional",
+      "Multi-org management",
+      "White-label options",
+    ],
     current: false,
   },
-]
+];
 
 export default function BillingPage() {
   return (
@@ -75,9 +99,7 @@ export default function BillingPage() {
                   <span>N/A</span>
                 </div>
               </div>
-              <Button className="w-full">
-                Upgrade Plan
-              </Button>
+              <Button className="w-full">Upgrade Plan</Button>
             </div>
           </CardContent>
         </Card>
@@ -85,9 +107,7 @@ export default function BillingPage() {
         <Card>
           <CardHeader>
             <CardTitle>Usage This Month</CardTitle>
-            <CardDescription>
-              Your statement delivery usage
-            </CardDescription>
+            <CardDescription>Your statement delivery usage</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -97,17 +117,23 @@ export default function BillingPage() {
                   <span>0</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{width: '0%'}}></div>
+                  <div
+                    className="bg-primary h-2 rounded-full"
+                    style={{ width: "0%" }}
+                  ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Accounts connected</span>
                   <span>0 / 1</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{width: '0%'}}></div>
+                  <div
+                    className="bg-primary h-2 rounded-full"
+                    style={{ width: "0%" }}
+                  ></div>
                 </div>
               </div>
 
@@ -135,17 +161,21 @@ export default function BillingPage() {
               <div
                 key={plan.name}
                 className={`border rounded-lg p-4 ${
-                  plan.current ? 'border-primary bg-primary/5' : ''
+                  plan.current ? "border-primary bg-primary/5" : ""
                 }`}
               >
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">{plan.name}</h3>
-                      {plan.current && <Badge variant="secondary">Current</Badge>}
+                      {plan.current && (
+                        <Badge variant="secondary">Current</Badge>
+                      )}
                     </div>
                     <div className="mt-2">
-                      <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
+                      <span className="text-3xl font-bold">
+                        {formatCurrency(plan.price)}
+                      </span>
                       <span className="text-muted-foreground">/month</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -164,10 +194,10 @@ export default function BillingPage() {
 
                   <Button
                     className="w-full"
-                    variant={plan.current ? 'secondary' : 'default'}
+                    variant={plan.current ? "secondary" : "default"}
                     disabled={plan.current}
                   >
-                    {plan.current ? 'Current Plan' : 'Upgrade'}
+                    {plan.current ? "Current Plan" : "Upgrade"}
                   </Button>
                 </div>
               </div>
@@ -176,5 +206,5 @@ export default function BillingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

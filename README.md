@@ -27,16 +27,19 @@ Automated bank statement retrieval and delivery service for US businesses.
 ## Development Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Set up environment variables:
+
 ```bash
 cp .env.example .env.local
 ```
 
 3. Run development servers:
+
 ```bash
 npm run dev
 ```

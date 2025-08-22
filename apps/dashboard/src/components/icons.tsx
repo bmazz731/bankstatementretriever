@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   AlertTriangle,
@@ -46,9 +46,9 @@ import {
   Users,
   Zap,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-export type Icon = LucideIcon
+export type Icon = LucideIcon;
 
 export const Icons = {
   logo: Command,
@@ -131,4 +131,4 @@ export const Icons = {
     </svg>
   ),
   twitter: Twitter,
-}
+};

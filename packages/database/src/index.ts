@@ -1,7 +1,7 @@
 // Main export file for @bsr/database package
-export { prisma, PrismaClient } from './client'
-export * from './types'
-export * from './queries'
+export { prisma, PrismaClient } from "./client";
+export * from "./types";
+export * from "./queries";
 
 // Re-export Prisma types for convenience
 export type {
@@ -18,5 +18,5 @@ export type {
   AuditLog,
   BackfillJob,
   NotificationPreference,
-  Prisma
-} from './client'
+  Prisma,
+} from "./client";
