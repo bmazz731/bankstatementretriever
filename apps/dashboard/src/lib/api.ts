@@ -9,6 +9,22 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export interface AccountsResponse {
+  data: Account[];
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+import type { Account, Destination } from "@/types";
+
 class ApiClient {
   private supabase = createSupabaseClient();
 
@@ -65,7 +81,7 @@ class ApiClient {
     status?: string;
     page?: number;
     page_size?: number;
-  }) {
+  }): Promise<ApiResponse<AccountsResponse>> {
     const searchParams = new URLSearchParams();
     if (params?.status) searchParams.set("status", params.status);
     if (params?.page) searchParams.set("page", params.page.toString());
@@ -73,23 +89,23 @@ class ApiClient {
       searchParams.set("page_size", params.page_size.toString());
 
     const query = searchParams.toString();
-    return this.request(`/api/accounts${query ? `?${query}` : ""}`);
+    return this.request<AccountsResponse>(`/api/accounts${query ? `?${query}` : ""}`);
   }
 
-  async deleteAccount(accountId: string) {
-    return this.request(`/api/accounts/${accountId}`, { method: "DELETE" });
+  async deleteAccount(accountId: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request<{ success: boolean; message: string }>(`/api/accounts/${accountId}`, { method: "DELETE" });
   }
 
-  async syncAccount(accountId: string) {
-    return this.request(`/api/accounts/${accountId}/sync`, { method: "POST" });
+  async syncAccount(accountId: string): Promise<ApiResponse<{ success: boolean; message: string; account_id: string; estimated_completion: string }>> {
+    return this.request<{ success: boolean; message: string; account_id: string; estimated_completion: string }>(`/api/accounts/${accountId}/sync`, { method: "POST" });
   }
 
   async backfillAccount(
     accountId: string,
     range_start: string,
     range_end: string,
-  ) {
-    return this.request(`/api/accounts/${accountId}/backfill`, {
+  ): Promise<ApiResponse<{ success: boolean; message: string; job_id?: string }>> {
+    return this.request<{ success: boolean; message: string; job_id?: string }>(`/api/accounts/${accountId}/backfill`, {
       method: "POST",
       body: JSON.stringify({ range_start, range_end }),
     });
@@ -121,8 +137,8 @@ class ApiClient {
   }
 
   // Destination endpoints
-  async getDestinations() {
-    return this.request("/api/destinations");
+  async getDestinations(): Promise<ApiResponse<{ destinations: Destination[] }>> {
+    return this.request<{ destinations: Destination[] }>("/api/destinations");
   }
 
   async createDestination(destination: {
@@ -171,13 +187,13 @@ class ApiClient {
     });
   }
 
-  // Plaid endpoints
-  async createLinkToken() {
-    return this.request("/api/plaid/link_token", { method: "POST" });
+  // Plaid endpoints  
+  async createLinkToken(): Promise<ApiResponse<{ link_token: string; expiration: string }>> {
+    return this.request<{ link_token: string; expiration: string }>("/api/plaid/link_token", { method: "POST" });
   }
 
-  async exchangePublicToken(publicToken: string, backfillMonths: number = 1) {
-    return this.request("/api/plaid/exchange_public_token", {
+  async exchangePublicToken(publicToken: string, backfillMonths: number = 1): Promise<ApiResponse<{ success: boolean; item_id: string; accounts_added: number; organization_id: string }>> {
+    return this.request<{ success: boolean; item_id: string; accounts_added: number; organization_id: string }>("/api/plaid/exchange_public_token", {
       method: "POST",
       body: JSON.stringify({
         public_token: publicToken,

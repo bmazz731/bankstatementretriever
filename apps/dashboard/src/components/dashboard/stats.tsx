@@ -22,8 +22,44 @@ export function DashboardStats() {
     queryFn: () => apiClient.getDestinations(),
   });
 
-  const accountData = accounts?.data?.accounts || [];
-  const destinationData = destinations?.data?.destinations || [];
+  // Helper to safely extract accounts data from API response
+  const getAccountsData = (apiResponse: any): any[] => {
+    if (!apiResponse) return [];
+    
+    // Handle double-wrapped response: apiResponse.data.data (from API client wrapping workers response)
+    if (apiResponse.data && Array.isArray(apiResponse.data.data)) {
+      return apiResponse.data.data;
+    }
+    
+    // Handle single-wrapped response: apiResponse.data
+    if (Array.isArray(apiResponse.data)) return apiResponse.data;
+    
+    // Handle accounts property (fallback)
+    if (Array.isArray(apiResponse.accounts)) return apiResponse.accounts;
+    
+    return [];
+  };
+
+  // Helper to safely extract destinations data from API response  
+  const getDestinationsData = (apiResponse: any): any[] => {
+    if (!apiResponse) return [];
+    
+    // Handle double-wrapped response
+    if (apiResponse.data && Array.isArray(apiResponse.data.destinations)) {
+      return apiResponse.data.destinations;
+    }
+    
+    // Handle single-wrapped response
+    if (Array.isArray(apiResponse.data)) return apiResponse.data;
+    
+    // Handle destinations property (fallback)
+    if (Array.isArray(apiResponse.destinations)) return apiResponse.destinations;
+    
+    return [];
+  };
+
+  const accountData = getAccountsData(accounts);
+  const destinationData = getDestinationsData(destinations);
 
   const activeAccounts = accountData.filter(
     (account) => account.status === "active",

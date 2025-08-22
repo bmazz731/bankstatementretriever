@@ -63,17 +63,22 @@ export default function AccountsPage() {
   console.log("DEBUG - React Query error:", error);
   console.log("DEBUG - React Query accounts data:", accounts);
 
-  // Defensive data access to handle various API response structures
+  // Defensive data access to handle API response structure
   const getAccountsData = (apiResponse: any): any[] => {
     if (!apiResponse) return [];
 
     // Handle direct array response
     if (Array.isArray(apiResponse)) return apiResponse;
 
-    // Handle nested data response
+    // Handle double-wrapped response: apiResponse.data.data (from API client wrapping workers response)
+    if (apiResponse.data && Array.isArray(apiResponse.data.data)) {
+      return apiResponse.data.data;
+    }
+
+    // Handle single-wrapped response: apiResponse.data
     if (Array.isArray(apiResponse.data)) return apiResponse.data;
 
-    // Handle accounts property (based on type definition)
+    // Handle accounts property (fallback)
     if (Array.isArray(apiResponse.accounts)) return apiResponse.accounts;
 
     return [];
