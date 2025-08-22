@@ -6,6 +6,7 @@ import { PlaidService, PlaidAPIError } from '../lib/plaid-service'
 import { TokenEncryption } from '../lib/encryption'
 import { requestId, apiLogger, errorHandler } from '../middleware/api'
 import { authenticateSupabaseUser, createSupabaseClient } from '../lib/auth'
+import { validateUserOrganization } from '../lib/user-setup'
 import { z } from 'zod'
 import type { Env } from '../types/env'
 
@@ -295,12 +296,36 @@ plaid.post('/exchange_public_token', async (c) => {
     // Step 3: Encrypt and store access token
     const encryptedToken = await encryption.encrypt(exchangeResponse.access_token)
     
-    // Step 4: Store connection in database
+    // Step 4: Validate user organization before database operations
+    const orgValidation = await validateUserOrganization(c.env, user.id, user.org_id)
+    if (!orgValidation.valid) {
+      console.error('Organization validation failed:', orgValidation.error)
+      return c.json({
+        error: 'BSR_DATABASE_ERROR',
+        message: 'User organization is invalid. Please contact support.',
+        debug: {
+          org_id: user.org_id,
+          user_id: user.id,
+          validation_error: orgValidation.error
+        }
+      }, 500)
+    }
+
+    // Step 5: Store connection in database
     const supabase = createSupabaseClient(c.env)
+    
+    console.log('Attempting to insert connection with data:', {
+      org_id: user.org_id,
+      plaid_item_id: exchangeResponse.item_id,
+      institution: accountsResponse.item.institution_id || 'unknown',
+      user_id: user.id,
+      user_email: user.email
+    })
+    
     const { data: connection, error: connectionError } = await supabase
       .from('connections')
       .insert({
-        org_id: user.org_id, // Uses user.org_id (fallback to user.id from auth)
+        org_id: user.org_id,
         plaid_item_id: exchangeResponse.item_id,
         institution: accountsResponse.item.institution_id || 'unknown',
         access_token_encrypted: `${encryptedToken.encrypted}:${encryptedToken.iv}`,
@@ -310,14 +335,53 @@ plaid.post('/exchange_public_token', async (c) => {
       .single()
 
     if (connectionError) {
-      console.error('Database connection error:', connectionError)
+      console.error('Database connection insertion failed:', {
+        error: connectionError,
+        errorCode: connectionError.code,
+        errorMessage: connectionError.message,
+        errorDetails: connectionError.details,
+        errorHint: connectionError.hint,
+        user_org_id: user.org_id,
+        user_id: user.id,
+        plaid_item_id: exchangeResponse.item_id
+      })
+      
+      // Check if it's a foreign key constraint error
+      if (connectionError.code === '23503') {
+        return c.json({
+          error: 'BSR_DATABASE_ERROR',
+          message: 'Failed to store connection: Organization not found. Please contact support.',
+          debug: {
+            constraint: connectionError.details,
+            org_id: user.org_id
+          }
+        }, 500)
+      }
+      
+      // Check if it's a unique constraint violation
+      if (connectionError.code === '23505') {
+        return c.json({
+          error: 'BSR_DATABASE_ERROR',
+          message: 'This bank connection already exists.',
+          debug: {
+            constraint: connectionError.details,
+            plaid_item_id: exchangeResponse.item_id
+          }
+        }, 409)
+      }
+      
       return c.json({
         error: 'BSR_DATABASE_ERROR',
-        message: 'Failed to store connection'
+        message: 'Failed to store connection',
+        debug: {
+          code: connectionError.code,
+          message: connectionError.message,
+          details: connectionError.details
+        }
       }, 500)
     }
 
-    // Step 5: Store accounts and check statements support
+    // Step 6: Store accounts and check statements support
     const accountsToReturn = []
     
     for (const account of accountsResponse.accounts) {
@@ -352,7 +416,14 @@ plaid.post('/exchange_public_token', async (c) => {
         .single()
 
       if (accountError) {
-        console.error('Database account error:', accountError)
+        console.error('Database account insertion failed:', {
+          error: accountError,
+          errorCode: accountError.code,
+          errorMessage: accountError.message,
+          errorDetails: accountError.details,
+          account_id: account.account_id,
+          connection_id: connection.id
+        })
         continue // Don't fail the whole request for one account
       }
 
@@ -367,7 +438,7 @@ plaid.post('/exchange_public_token', async (c) => {
       })
     }
 
-    // Step 6: Schedule initial backfill if requested
+    // Step 7: Schedule initial backfill if requested
     if (validatedInput.backfill_months > 0) {
       const endDate = new Date()
       const startDate = new Date()

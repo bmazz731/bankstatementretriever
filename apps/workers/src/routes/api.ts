@@ -348,11 +348,11 @@ api.post('/destinations', async (c) => {
       },
       body: JSON.stringify({
         id: destinationId,
-        type,
+        kind: type,
         name,
-        config,
+        config_json: config,
         folder_path: folder_path || '/',
-        status: 'active',
+        active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -381,7 +381,7 @@ api.post('/destinations', async (c) => {
 
 api.get('/destinations', async (c) => {
   try {
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/destinations?status=eq.active&order=created_at.desc`, {
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/destinations?active=eq.true&order=created_at.desc`, {
       headers: {
         'apikey': c.env.SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${c.env.SUPABASE_SERVICE_ROLE_KEY}`,
@@ -394,10 +394,10 @@ api.get('/destinations', async (c) => {
     return c.json({
       destinations: destinations.map((dest: any) => ({
         id: dest.id,
-        type: dest.type,
+        type: dest.kind,
         name: dest.name,
         folder_path: dest.folder_path,
-        status: dest.status,
+        status: dest.active ? 'active' : 'inactive',
         created_at: dest.created_at
       }))
     })
@@ -417,7 +417,7 @@ api.post('/destinations/:id/test', async (c) => {
   
   try {
     // Get destination
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/destinations?id=eq.${destinationId}&type=eq.webhook&select=*`, {
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/destinations?id=eq.${destinationId}&kind=eq.webhook&select=*`, {
       headers: {
         'apikey': c.env.SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${c.env.SUPABASE_SERVICE_ROLE_KEY}`,

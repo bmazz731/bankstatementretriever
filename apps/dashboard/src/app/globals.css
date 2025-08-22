@@ -75,6 +75,23 @@
   @apply bg-muted-foreground/30;
 }
 
+/* Dialog scrollbar - thinner for modal content */
+.dialog-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dialog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-scroll::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+
+.dialog-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
 /* Loading animation */
 @keyframes spin {
   to {

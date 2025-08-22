@@ -170,15 +170,15 @@ export function PlaidLinkButton() {
       </Button>
 
       <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] w-[calc(100vw-1rem)] sm:w-full flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Authorize Bank Statement Retrieval</DialogTitle>
             <DialogDescription>
               Review and confirm your authorization for automated statement retrieval from your selected accounts.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2 dialog-scroll">
             {/* Account Summary */}
             {consentData.metadata && (
               <Card>
@@ -311,29 +311,30 @@ export function PlaidLinkButton() {
               </CardContent>
             </Card>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowConsentDialog(false)}
-                disabled={exchangeMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConsentConfirm}
-                disabled={!isConsentValid || exchangeMutation.isPending}
-              >
-                {exchangeMutation.isPending ? (
-                  <>
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  'Connect & Authorize'
-                )}
-              </Button>
-            </div>
+          </div>
+
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="flex-shrink-0 flex justify-end space-x-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowConsentDialog(false)}
+              disabled={exchangeMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConsentConfirm}
+              disabled={!isConsentValid || exchangeMutation.isPending}
+            >
+              {exchangeMutation.isPending ? (
+                <>
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect & Authorize'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
