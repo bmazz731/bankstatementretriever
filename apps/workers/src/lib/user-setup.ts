@@ -56,73 +56,138 @@ export async function ensureUserAndOrganization(
     }
     
     // User doesn't exist in our database, but they're authenticated via Supabase Auth
-    // For the MVP, we'll use the user ID as the org ID to simplify the circular dependency
-    console.log('Creating new user with simplified org structure')
+    // Handle circular dependency using transaction with deferred constraints
+    console.log('Creating new user and organization with proper circular dependency handling')
     
-    // Create organization with user ID as org ID (eliminates circular dependency)
-    const orgId = authUser.id // Use same ID for simplicity
-    const { data: newOrg, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        id: orgId,
-        owner_user_id: authUser.id,
-        plan: 'free',
-        status: 'active'
-      })
-      .select()
-      .single()
+    // Generate unique organization ID to avoid circular reference issues
+    const orgId = crypto.randomUUID()
+    console.log('Generated org ID:', orgId, 'for user:', authUser.id)
     
-    if (orgError) {
-      console.error('Failed to create organization:', orgError)
-      return {
-        success: false,
-        error: 'Failed to create organization',
-        debugInfo: {
-          orgError,
-          userId: authUser.id,
-          attemptedOrgId: orgId
-        }
-      }
-    }
-    
-    // Now create the user record
-    const { data: newUser, error: newUserError } = await supabase
-      .from('users')
-      .insert({
-        id: authUser.id,
-        org_id: newOrg.id,
-        email: authUser.email || authUser.user_metadata?.email
-      })
-      .select()
-      .single()
-    
-    if (newUserError) {
-      console.error('Failed to create user:', newUserError)
-      // Cleanup: remove the organization we just created
-      await supabase.from('organizations').delete().eq('id', newOrg.id)
-      return {
-        success: false,
-        error: 'Failed to create user account',
-        debugInfo: {
-          newUserError,
-          orgId: newOrg.id,
-          userId: authUser.id
-        }
-      }
-    }
-    
-    console.log('Successfully created user and organization:', {
-      userId: newUser.id,
-      orgId: newOrg.id
+    // Use the transaction function to handle circular dependency
+    const { data: transactionResult, error: transactionError } = await supabase.rpc('create_user_and_organization', {
+      p_user_id: authUser.id,
+      p_org_id: orgId,
+      p_user_email: authUser.email || authUser.user_metadata?.email,
+      p_org_plan: 'free',
+      p_org_status: 'active'
     })
     
+    if (transactionError) {
+      console.error('Transaction error creating user and organization:', transactionError)
+      
+      // Check if RPC function doesn't exist, fall back to sequential approach
+      if (transactionError.code === '42883') {
+        console.log('RPC function not found, falling back to null-owner approach')
+        
+        // Fallback: Create organization with NULL owner_user_id first
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            id: orgId,
+            owner_user_id: null,  // Temporarily NULL to avoid FK constraint
+            plan: 'free',
+            status: 'active'
+          })
+          .select()
+          .single()
+        
+        if (orgError) {
+          console.error('Failed to create organization (fallback):', orgError)
+          return {
+            success: false,
+            error: 'Failed to create organization',
+            debugInfo: {
+              orgError,
+              userId: authUser.id,
+              attemptedOrgId: orgId,
+              approach: 'fallback_null_owner'
+            }
+          }
+        }
+        
+        // Create the user record
+        const { data: newUser, error: newUserError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            org_id: orgId,
+            email: authUser.email || authUser.user_metadata?.email
+          })
+          .select()
+          .single()
+        
+        if (newUserError) {
+          console.error('Failed to create user (fallback):', newUserError)
+          // Cleanup: remove the organization we just created
+          await supabase.from('organizations').delete().eq('id', orgId)
+          return {
+            success: false,
+            error: 'Failed to create user account',
+            debugInfo: {
+              newUserError,
+              orgId: orgId,
+              userId: authUser.id,
+              approach: 'fallback_after_org'
+            }
+          }
+        }
+        
+        // Update organization with proper owner_user_id
+        const { error: updateOrgError } = await supabase
+          .from('organizations')
+          .update({ owner_user_id: authUser.id })
+          .eq('id', orgId)
+        
+        if (updateOrgError) {
+          console.error('Failed to update organization owner (fallback):', updateOrgError)
+          // Cleanup both records
+          await supabase.from('users').delete().eq('id', authUser.id)
+          await supabase.from('organizations').delete().eq('id', orgId)
+          return {
+            success: false,
+            error: 'Failed to update organization owner',
+            debugInfo: {
+              updateOrgError,
+              orgId: orgId,
+              userId: authUser.id,
+              approach: 'fallback_org_update'
+            }
+          }
+        }
+        
+        console.log('Fallback approach successful - user and organization created')
+        
+        return {
+          success: true,
+          user: {
+            ...authUser,
+            org_id: orgId
+          },
+          organization: { id: orgId }
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Failed to create user and organization',
+          debugInfo: {
+            transactionError,
+            userId: authUser.id,
+            attemptedOrgId: orgId,
+            approach: 'transaction_rpc'
+          }
+        }
+      }
+    }
+    
+    // If we get here, the transaction was successful
+    console.log('Transaction successful - user and organization created')
     return {
       success: true,
       user: {
         ...authUser,
-        org_id: newOrg.id
+        org_id: orgId
       },
-      organization: newOrg
+      organization: { id: orgId }
     }
     
   } catch (error) {

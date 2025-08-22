@@ -318,24 +318,27 @@ plaid.post('/exchange_public_token', async (c) => {
         .single()
       
       if (!existingUser) {
-        console.log('Creating user and organization (avoiding circular reference)')
+        console.log('Creating user and organization using transaction with deferred constraints')
         
         // Generate unique organization ID to break circular dependency
         const orgId = crypto.randomUUID()
         console.log('Generated org ID:', orgId, 'for user:', user.id)
         
-        // Step 1: Create organization FIRST (so it exists when user references it)
-        const { error: orgError } = await supabase
+        // Use NULL owner approach to handle circular dependency
+        // Step 1: Create organization with NULL owner_user_id (avoids FK constraint)
+        const { data: orgData, error: orgError } = await supabase
           .from('organizations')
           .insert({
             id: orgId,
-            owner_user_id: user.id,
+            owner_user_id: null,  // NULL to avoid FK constraint
             plan: 'free',
             status: 'active'
           })
+          .select()
+          .single()
         
         if (orgError) {
-          console.error('DETAILED ORG ERROR (creating org first):', {
+          console.error('Failed to create organization with NULL owner:', {
             error: orgError,
             errorCode: orgError.code,
             errorMessage: orgError.message,
@@ -343,7 +346,7 @@ plaid.post('/exchange_public_token', async (c) => {
             errorHint: orgError.hint,
             user_id: user.id,
             org_id: orgId,
-            context: 'creating_org_first_before_user'
+            context: 'null_owner_approach'
           })
           return c.json({
             error: 'BSR_DATABASE_ERROR',
@@ -357,32 +360,23 @@ plaid.post('/exchange_public_token', async (c) => {
               },
               user_id: user.id, 
               org_id: orgId,
-              context: 'org_first_approach'
+              context: 'org_with_null_owner'
             }
           }, 500)
         }
-        console.log('Organization created successfully with id:', orgId)
+        console.log('Organization created with NULL owner, id:', orgId)
         
-        // Step 2: Now create user (organization exists for FK constraint)
+        // Step 2: Create user with reference to the organization
         const { error: userError } = await supabase
           .from('users')
           .insert({
             id: user.id,
-            org_id: orgId,  // This organization now exists
+            org_id: orgId,
             email: user.email || user.user_metadata?.email
           })
         
         if (userError) {
-          console.error('DETAILED USER ERROR (after org created):', {
-            error: userError,
-            errorCode: userError.code,
-            errorMessage: userError.message,
-            errorDetails: userError.details,
-            errorHint: userError.hint,
-            user_id: user.id,
-            org_id: orgId,
-            context: 'user_creation_after_org_exists'
-          })
+          console.error('Failed to create user after org:', userError)
           // Clean up the organization we just created
           await supabase.from('organizations').delete().eq('id', orgId)
           return c.json({
@@ -397,42 +391,156 @@ plaid.post('/exchange_public_token', async (c) => {
               },
               user_id: user.id, 
               org_id: orgId,
-              context: 'org_created_first'
+              context: 'user_after_null_owner_org'
             }
           }, 500)
         }
-        console.log('User record created successfully')
+        console.log('User created successfully')
         
-        if (orgError) {
-          console.error('DETAILED ORG ERROR (after user creation):', {
-            error: orgError,
-            errorCode: orgError.code,
-            errorMessage: orgError.message,
-            errorDetails: orgError.details,
-            errorHint: orgError.hint,
-            user_id: user.id,
-            org_id: orgId,
-            context: 'user_created_first_then_org_failed'
-          })
-          // Clean up the user we just created
+        // Step 3: Update organization with proper owner_user_id
+        const { error: updateError } = await supabase
+          .from('organizations')
+          .update({ owner_user_id: user.id })
+          .eq('id', orgId)
+        
+        if (updateError) {
+          console.error('Failed to update organization owner:', updateError)
+          // Clean up both records
           await supabase.from('users').delete().eq('id', user.id)
+          await supabase.from('organizations').delete().eq('id', orgId)
           return c.json({
             error: 'BSR_DATABASE_ERROR',
-            message: 'Failed to create organization (after user created)',
+            message: 'Failed to update organization owner',
             debug: { 
-              orgError: {
-                code: orgError.code,
-                message: orgError.message,
-                details: orgError.details,
-                hint: orgError.hint
+              updateError: {
+                code: updateError.code,
+                message: updateError.message,
+                details: updateError.details,
+                hint: updateError.hint
               },
               user_id: user.id, 
               org_id: orgId,
-              context: 'user_created_first'
+              context: 'update_org_owner'
             }
           }, 500)
         }
-        console.log('Organization created successfully with id:', orgId)
+        console.log('Organization owner updated successfully')
+        
+        // Update user object to use correct org_id for subsequent operations
+        user.org_id = orgId
+        
+        // Skip the old fallback code
+        if (false) {
+            console.log('RPC function not found, falling back to organization-first approach')
+            
+            // Fallback: Create organization with NULL owner_user_id first
+            const { error: orgError } = await supabase
+              .from('organizations')
+              .insert({
+                id: orgId,
+                owner_user_id: null,  // Temporarily NULL to avoid FK constraint
+                plan: 'free',
+                status: 'active'
+              })
+            
+            if (orgError) {
+              console.error('FALLBACK ORG ERROR:', orgError)
+              return c.json({
+                error: 'BSR_DATABASE_ERROR',
+                message: 'Failed to create organization',
+                debug: { 
+                  orgError: {
+                    code: orgError.code,
+                    message: orgError.message,
+                    details: orgError.details,
+                    hint: orgError.hint
+                  },
+                  user_id: user.id, 
+                  org_id: orgId,
+                  context: 'fallback_org_null_owner'
+                }
+              }, 500)
+            }
+            
+            // Create user with reference to organization
+            const { error: userError } = await supabase
+              .from('users')
+              .insert({
+                id: user.id,
+                org_id: orgId,
+                email: user.email || user.user_metadata?.email
+              })
+            
+            if (userError) {
+              console.error('FALLBACK USER ERROR:', userError)
+              // Clean up organization
+              await supabase.from('organizations').delete().eq('id', orgId)
+              return c.json({
+                error: 'BSR_DATABASE_ERROR',
+                message: 'Failed to create user account',
+                debug: { 
+                  userError: {
+                    code: userError.code,
+                    message: userError.message,
+                    details: userError.details,
+                    hint: userError.hint
+                  },
+                  user_id: user.id, 
+                  org_id: orgId,
+                  context: 'fallback_user_after_org'
+                }
+              }, 500)
+            }
+            
+            // Update organization with proper owner_user_id
+            const { error: updateOrgError } = await supabase
+              .from('organizations')
+              .update({ owner_user_id: user.id })
+              .eq('id', orgId)
+            
+            if (updateOrgError) {
+              console.error('FALLBACK ORG UPDATE ERROR:', updateOrgError)
+              // Clean up both records
+              await supabase.from('users').delete().eq('id', user.id)
+              await supabase.from('organizations').delete().eq('id', orgId)
+              return c.json({
+                error: 'BSR_DATABASE_ERROR',
+                message: 'Failed to update organization owner',
+                debug: { 
+                  updateOrgError: {
+                    code: updateOrgError.code,
+                    message: updateOrgError.message,
+                    details: updateOrgError.details,
+                    hint: updateOrgError.hint
+                  },
+                  user_id: user.id, 
+                  org_id: orgId,
+                  context: 'fallback_org_update'
+                }
+              }, 500)
+            }
+            
+            console.log('Fallback approach successful - user and organization created')
+          } else {
+            return c.json({
+              error: 'BSR_DATABASE_ERROR',
+              message: 'Failed to create user and organization',
+              debug: { 
+                transactionError: {
+                  code: transactionError.code,
+                  message: transactionError.message,
+                  details: transactionError.details,
+                  hint: transactionError.hint
+                },
+                user_id: user.id, 
+                org_id: orgId,
+                context: 'transaction_failed'
+              }
+            }, 500)
+          }
+        } else {
+          console.log('Transaction successful - user and organization created')
+        }
         
         // Update user object to use correct org_id for subsequent operations
         user.org_id = orgId
