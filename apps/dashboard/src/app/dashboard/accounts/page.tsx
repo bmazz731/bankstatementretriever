@@ -39,13 +39,7 @@ export default function AccountsPage() {
     queryFn: () => apiClient.getAccounts(),
   })
 
-  const accountData = Array.isArray(accounts?.data?.data) ? accounts.data?.data : []
-
-  // Debug logging
-  console.log('DEBUG - accounts:', accounts)
-  console.log('DEBUG - accounts?.data:', accounts?.data)
-  console.log('DEBUG - accounts?.data?.data:', accounts?.data?.data)
-  console.log('DEBUG - final accountData:', accountData)
+  const accountData = Array.isArray(accounts?.data) ? accounts.data : []
 
   const filteredAccounts = accountData.filter((account) => {
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
