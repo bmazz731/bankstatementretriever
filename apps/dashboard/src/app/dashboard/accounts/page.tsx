@@ -68,7 +68,7 @@ export default function AccountsPage() {
   console.log('DEBUG - accountData length:', accountData.length)
 
   // Safe property access helper to prevent React crashes
-  const safeAccess = <T>(obj: any, path: string[], defaultValue: T): T => {
+  const safeAccess = <T,>(obj: any, path: string[], defaultValue: T): T => {
     try {
       return path.reduce((current, key) => current?.[key], obj) ?? defaultValue
     } catch {
