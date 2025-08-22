@@ -2,35 +2,9 @@
  * Accounts API routes for Cloudflare Workers - Production Implementation
  */
 import { Hono } from 'hono'
-import { createClient } from '@supabase/supabase-js'
-import { requestId, apiLogger, errorHandler, extractUserContext } from '../middleware/api'
+import { requestId, apiLogger, errorHandler } from '../middleware/api'
+import { authenticateSupabaseUser, createSupabaseClient } from '../lib/auth'
 import type { Env } from '../types/env'
-
-// Helper functions
-const createSupabaseClient = (env: Env) => {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  })
-}
-
-const getCurrentUser = (c: any) => {
-  const userId = c.get('userId')
-  const userEmail = c.get('userEmail')
-  const orgId = c.get('orgId')
-  
-  if (!userId || !userEmail || !orgId) {
-    return null
-  }
-  
-  return {
-    id: userId,
-    email: userEmail,
-    org_id: orgId
-  }
-}
 
 const accounts = new Hono<{ Bindings: Env }>()
 
@@ -40,13 +14,26 @@ accounts.use('*', apiLogger)
 accounts.use('*', errorHandler)
 
 // Get all accounts for authenticated user
-accounts.get('/', extractUserContext, async (c) => {
+accounts.get('/', async (c) => {
   try {
-    const user = getCurrentUser(c)
-    if (!user) {
+    // Simple auth check using Authorization header (same as Plaid routes)
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({
         error: 'BSR_AUTH_ERROR',
         message: 'Authentication required'
+      }, 401)
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createSupabaseClient(c.env)
+    
+    // Verify the token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (error || !user) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: 'Invalid token'
       }, 401)
     }
 
@@ -152,15 +139,15 @@ accounts.get('/', extractUserContext, async (c) => {
 })
 
 // Trigger manual sync for account
-accounts.post('/:accountId/sync', extractUserContext, async (c) => {
+accounts.post('/:accountId/sync', async (c) => {
   try {
     const accountId = c.req.param('accountId')
-    const user = getCurrentUser(c)
     
-    if (!user) {
+    const { error, user } = await authenticateSupabaseUser(c)
+    if (error) {
       return c.json({
         error: 'BSR_AUTH_ERROR',
-        message: 'Authentication required'
+        message: error
       }, 401)
     }
     
