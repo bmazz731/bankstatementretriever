@@ -39,13 +39,43 @@ export default function AccountsPage() {
     queryFn: () => apiClient.getAccounts(),
   })
 
-  const accountData = Array.isArray(accounts?.data) ? accounts.data : []
+  // Defensive data access to handle various API response structures
+  const getAccountsData = (apiResponse: any): any[] => {
+    if (!apiResponse) return []
+    
+    // Handle direct array response
+    if (Array.isArray(apiResponse)) return apiResponse
+    
+    // Handle nested data response
+    if (Array.isArray(apiResponse.data)) return apiResponse.data
+    
+    // Handle accounts property (based on type definition)
+    if (Array.isArray(apiResponse.accounts)) return apiResponse.accounts
+    
+    return []
+  }
+
+  const accountData = getAccountsData(accounts)
+
+  // Safe property access helper to prevent React crashes
+  const safeAccess = <T>(obj: any, path: string[], defaultValue: T): T => {
+    try {
+      return path.reduce((current, key) => current?.[key], obj) ?? defaultValue
+    } catch {
+      return defaultValue
+    }
+  }
 
   const filteredAccounts = accountData.filter((account) => {
-    const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.connection?.institution_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!account) return false
     
-    const matchesStatus = statusFilter === 'all' || account.status === statusFilter
+    const accountName = safeAccess(account, ['name'], '')
+    const institutionName = safeAccess(account, ['connection', 'institution_name'], '')
+    
+    const matchesSearch = accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      institutionName.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === 'all' || safeAccess(account, ['status'], '') === statusFilter
     
     return matchesSearch && matchesStatus
   })
