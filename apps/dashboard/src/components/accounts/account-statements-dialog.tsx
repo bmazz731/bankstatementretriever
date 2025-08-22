@@ -31,7 +31,25 @@ export function AccountStatementsDialog({
     enabled: open,
   });
 
-  const statementData = statements?.data?.statements || [];
+  // Helper to safely extract statements data from API response
+  const getStatementsData = (apiResponse: any): any[] => {
+    if (!apiResponse) return [];
+    
+    // Handle double-wrapped response: apiResponse.data.data (from API client wrapping workers response)
+    if (apiResponse.data && Array.isArray(apiResponse.data.data)) {
+      return apiResponse.data.data;
+    }
+    
+    // Handle single-wrapped response: apiResponse.data
+    if (Array.isArray(apiResponse.data)) return apiResponse.data;
+    
+    // Handle statements property (fallback)
+    if (Array.isArray(apiResponse.statements)) return apiResponse.statements;
+    
+    return [];
+  };
+
+  const statementData = getStatementsData(statements);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

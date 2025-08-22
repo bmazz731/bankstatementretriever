@@ -42,10 +42,14 @@ export function DestinationGrid({
       apiClient.testWebhookDestination(destinationId),
     onSuccess: (data, destinationId) => {
       queryClient.invalidateQueries({ queryKey: ["destinations"] });
+      // Handle API response structure - data might be wrapped
+      const responseData = (data as any)?.data || data;
+      const success = (responseData as any)?.success;
+      const message = (responseData as any)?.message;
       addNotification({
-        type: data.data?.success ? "success" : "error",
-        title: data.data?.success ? "Test successful" : "Test failed",
-        description: data.data?.message || "Destination test completed",
+        type: success ? "success" : "error",
+        title: success ? "Test successful" : "Test failed",
+        description: message || "Destination test completed",
       });
     },
     onError: (error: any) => {

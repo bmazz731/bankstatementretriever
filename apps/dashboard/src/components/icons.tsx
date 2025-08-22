@@ -59,11 +59,13 @@ export const Icons = {
   trash: Trash,
   post: FileText,
   page: File,
+  file: File, // Add file icon alias
   media: Image,
   settings: Settings,
   billing: CreditCard,
   ellipsis: MoreVertical,
   add: Plus,
+  plus: Plus, // Add plus icon alias
   warning: AlertTriangle,
   user: User,
   arrowRight: ArrowRight,
@@ -94,6 +96,7 @@ export const Icons = {
   upload: Upload,
   users: Users,
   zap: Zap,
+  x: X, // Add x icon alias
   gitHub: ({ ...props }: React.SVGProps<SVGSVGElement>) => (
     <svg
       aria-hidden="true"
