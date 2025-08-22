@@ -52,7 +52,7 @@ class ApiClient {
     }
   }
 
-  // Account endpoints
+  // Account endpoints  
   async getAccounts(params?: { status?: string; page?: number; page_size?: number }) {
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set('status', params.status)
@@ -60,7 +60,10 @@ class ApiClient {
     if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
     
     const query = searchParams.toString()
-    return this.request(`/api/accounts${query ? `?${query}` : ''}`)
+    const result = await this.request(`/api/accounts${query ? `?${query}` : ''}`)
+    
+    // Unwrap double-wrapped response for accounts endpoint only
+    return result.data || result
   }
 
   async deleteAccount(accountId: string) {
