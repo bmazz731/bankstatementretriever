@@ -27,7 +27,7 @@ export async function ensureUserAndOrganization(
   try {
     console.log('Ensuring user and organization setup for:', authUser.email)
     
-    // First, check if user already exists
+    // First, check if user already exists in our database
     const { data: existingUser, error: userCheckError } = await supabase
       .from('users')
       .select('id, org_id, email')
@@ -45,13 +45,26 @@ export async function ensureUserAndOrganization(
       }
     }
     
-    // User doesn't exist, need to create user and organization
-    console.log('Creating new user and organization')
+    // Check if user exists but the query failed for other reasons
+    if (userCheckError && userCheckError.code !== 'PGRST116') {
+      console.error('Database error checking for existing user:', userCheckError)
+      return {
+        success: false,
+        error: 'Database error during user lookup',
+        debugInfo: { userCheckError }
+      }
+    }
     
-    // Start a transaction-like operation by creating organization first
+    // User doesn't exist in our database, but they're authenticated via Supabase Auth
+    // For the MVP, we'll use the user ID as the org ID to simplify the circular dependency
+    console.log('Creating new user with simplified org structure')
+    
+    // Create organization with user ID as org ID (eliminates circular dependency)
+    const orgId = authUser.id // Use same ID for simplicity
     const { data: newOrg, error: orgError } = await supabase
       .from('organizations')
       .insert({
+        id: orgId,
         owner_user_id: authUser.id,
         plan: 'free',
         status: 'active'
@@ -66,7 +79,8 @@ export async function ensureUserAndOrganization(
         error: 'Failed to create organization',
         debugInfo: {
           orgError,
-          userId: authUser.id
+          userId: authUser.id,
+          attemptedOrgId: orgId
         }
       }
     }
