@@ -51,7 +51,12 @@ export default function AccountsPage() {
     // Handle direct array response
     if (Array.isArray(apiResponse)) return apiResponse
     
-    // Handle nested data response
+    // Handle double-nested data response (current structure)
+    if (apiResponse.data && Array.isArray(apiResponse.data.data)) {
+      return apiResponse.data.data
+    }
+    
+    // Handle single-nested data response
     if (Array.isArray(apiResponse.data)) return apiResponse.data
     
     // Handle accounts property (based on type definition)
