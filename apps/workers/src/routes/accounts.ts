@@ -16,31 +16,19 @@ accounts.use('*', errorHandler)
 // Get all accounts for authenticated user
 accounts.get('/', async (c) => {
   try {
-    // Simple auth check using Authorization header (same as Plaid routes)
-    const authHeader = c.req.header('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const { error, user } = await authenticateSupabaseUser(c)
+    if (error) {
       return c.json({
         error: 'BSR_AUTH_ERROR',
-        message: 'Authentication required'
+        message: error
       }, 401)
     }
 
-    const token = authHeader.replace('Bearer ', '')
     const supabase = createSupabaseClient(c.env)
-    
-    // Verify the token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (error || !user) {
-      return c.json({
-        error: 'BSR_AUTH_ERROR',
-        message: 'Invalid token'
-      }, 401)
-    }
 
     const { status, page = '1', page_size = '20' } = c.req.query()
-    const supabase = createSupabaseClient(c.env)
     
-    // Build query for accounts with connections
+    // Build query for accounts with connections  
     let query = supabase
       .from('accounts')
       .select(`
