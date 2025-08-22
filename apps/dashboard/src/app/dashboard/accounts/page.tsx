@@ -34,10 +34,15 @@ export default function AccountsPage() {
   const [showStatements, setShowStatements] = useState(false)
   const [showBackfill, setShowBackfill] = useState(false)
 
-  const { data: accounts, isLoading } = useQuery({
+  const { data: accounts, isLoading, error } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => apiClient.getAccounts(),
   })
+
+  // Debug React Query state
+  console.log('DEBUG - React Query isLoading:', isLoading)
+  console.log('DEBUG - React Query error:', error)
+  console.log('DEBUG - React Query accounts data:', accounts)
 
   // Defensive data access to handle various API response structures
   const getAccountsData = (apiResponse: any): any[] => {
