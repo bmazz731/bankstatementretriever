@@ -16,15 +16,24 @@ Automated bank statement retrieval and delivery service for US businesses.
 /
 ├── apps/
 │   ├── dashboard/     # Next.js customer dashboard
-│   └── workers/       # Cloudflare Workers
-├── packages/
-│   ├── database/      # Supabase schema and migrations
-│   ├── shared/        # Shared types and utilities
-│   └── config/        # Shared configuration
-└── docs/              # Documentation
+│   └── workers/       # Cloudflare Workers API
+├── packages/          # Shared libraries
+├── docs/              # Documentation
+│   ├── implementation/  # Technical implementation docs
+│   ├── setup/          # Setup and configuration guides
+│   └── prd.md         # Product Requirements Document
+├── deploy/            # Deployment automation
+│   ├── database/      # Database migrations and fixes
+│   └── scripts/       # Deployment and setup scripts
+├── scripts/           # Utility scripts
+└── .github/           # GitHub workflows and configurations
 ```
 
-## Development Setup
+## Quick Start
+
+For detailed setup instructions, see the [Setup Guide](./docs/setup/SETUP.md).
+
+### Development Setup
 
 1. Install dependencies:
 
