@@ -39,13 +39,11 @@ export default function AccountsPage() {
     queryFn: () => apiClient.getAccounts(),
   })
 
-  const accountData = Array.isArray(accounts?.data?.data) ? accounts.data.data : []
+  const accountData = Array.isArray(accounts?.data) ? accounts.data : []
 
   const filteredAccounts = accountData.filter((account) => {
-    if (!account || !account.name) return false
-    
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (account.connection?.institution_name && account.connection.institution_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      account.connection?.institution_name?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || account.status === statusFilter
     
