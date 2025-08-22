@@ -310,7 +310,7 @@ plaid.post('/exchange_public_token', async (c) => {
       console.log('Organization does not exist, creating it with id:', user.org_id)
       
       // Handle case where org_id equals user.id (circular reference)
-      // First check if user exists in our database
+      // Check if user exists in our database
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
@@ -318,45 +318,77 @@ plaid.post('/exchange_public_token', async (c) => {
         .single()
       
       if (!existingUser) {
-        console.log('Creating user record first to handle circular reference')
+        console.log('Creating user and organization (avoiding circular reference)')
+        
+        // Generate unique organization ID to break circular dependency
+        const orgId = crypto.randomUUID()
+        console.log('Generated org ID:', orgId, 'for user:', user.id)
+        
+        // Step 1: Create organization first (no circular reference)
+        const { error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            id: orgId,
+            owner_user_id: user.id,
+            plan: 'free',
+            status: 'active'
+          })
+        
+        if (orgError) {
+          console.error('Failed to create organization:', orgError)
+          return c.json({
+            error: 'BSR_DATABASE_ERROR',
+            message: 'Failed to create organization',
+            debug: { orgError, user_id: user.id, org_id: orgId }
+          }, 500)
+        }
+        console.log('Organization created successfully with id:', orgId)
+        
+        // Step 2: Now create user with proper org_id reference
         const { error: userError } = await supabase
           .from('users')
           .insert({
             id: user.id,
-            org_id: user.org_id,
+            org_id: orgId,
             email: user.email || user.user_metadata?.email
           })
         
         if (userError) {
           console.error('Failed to create user:', userError)
+          // Clean up the organization we just created
+          await supabase.from('organizations').delete().eq('id', orgId)
           return c.json({
             error: 'BSR_DATABASE_ERROR',
             message: 'Failed to create user account',
-            debug: { userError, user_id: user.id, org_id: user.org_id }
+            debug: { userError, user_id: user.id, org_id: orgId }
           }, 500)
         }
         console.log('User record created successfully')
+        
+        // Update user object to use correct org_id for subsequent operations
+        user.org_id = orgId
+        
+      } else {
+        // User exists but organization doesn't - create organization
+        const { error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            id: user.org_id,
+            owner_user_id: user.id,
+            plan: 'free',
+            status: 'active'
+          })
+        
+        if (orgError) {
+          console.error('Failed to create organization:', orgError)
+          return c.json({
+            error: 'BSR_DATABASE_ERROR',
+            message: 'Failed to create organization',
+            debug: { orgError, user_id: user.id, org_id: user.org_id }
+          }, 500)
+        }
+        console.log('Organization created successfully')
       }
-      
-      // Now create organization
-      const { error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          id: user.org_id,
-          owner_user_id: user.id,
-          plan: 'free',
-          status: 'active'
-        })
-      
-      if (orgError) {
-        console.error('Failed to create organization:', orgError)
-        return c.json({
-          error: 'BSR_DATABASE_ERROR',
-          message: 'Failed to create organization',
-          debug: { orgError, user_id: user.id, org_id: user.org_id }
-        }, 500)
-      }
-      console.log('Organization created successfully')
     }
     
     console.log('Attempting to insert connection with data:', {
