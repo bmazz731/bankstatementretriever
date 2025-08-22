@@ -6,7 +6,6 @@ import { PlaidService, PlaidAPIError } from '../lib/plaid-service'
 import { TokenEncryption } from '../lib/encryption'
 import { requestId, apiLogger, errorHandler } from '../middleware/api'
 import { authenticateSupabaseUser, createSupabaseClient } from '../lib/auth'
-import { validateUserOrganization } from '../lib/user-setup'
 import { z } from 'zod'
 import type { Env } from '../types/env'
 
@@ -296,22 +295,7 @@ plaid.post('/exchange_public_token', async (c) => {
     // Step 3: Encrypt and store access token
     const encryptedToken = await encryption.encrypt(exchangeResponse.access_token)
     
-    // Step 4: Validate user organization before database operations
-    const orgValidation = await validateUserOrganization(c.env, user.id, user.org_id)
-    if (!orgValidation.valid) {
-      console.error('Organization validation failed:', orgValidation.error)
-      return c.json({
-        error: 'BSR_DATABASE_ERROR',
-        message: 'User organization is invalid. Please contact support.',
-        debug: {
-          org_id: user.org_id,
-          user_id: user.id,
-          validation_error: orgValidation.error
-        }
-      }, 500)
-    }
-
-    // Step 5: Store connection in database
+    // Step 4: Store connection in database
     const supabase = createSupabaseClient(c.env)
     
     console.log('Attempting to insert connection with data:', {
@@ -381,7 +365,7 @@ plaid.post('/exchange_public_token', async (c) => {
       }, 500)
     }
 
-    // Step 6: Store accounts and check statements support
+    // Step 5: Store accounts and check statements support
     const accountsToReturn = []
     
     for (const account of accountsResponse.accounts) {
@@ -438,7 +422,7 @@ plaid.post('/exchange_public_token', async (c) => {
       })
     }
 
-    // Step 7: Schedule initial backfill if requested
+    // Step 6: Schedule initial backfill if requested
     if (validatedInput.backfill_months > 0) {
       const endDate = new Date()
       const startDate = new Date()
