@@ -68,29 +68,83 @@ plaid.post('/webhook', async (c) => {
   }
 })
 
+// DEBUG ENDPOINT: Check environment variables
+plaid.post('/debug_env', async (c) => {
+  return c.json({
+    hasPlaidClientId: !!c.env.PLAID_CLIENT_ID,
+    hasPlaidSecret: !!c.env.PLAID_SECRET,
+    plaidEnv: c.env.PLAID_ENV,
+    domain: c.env.DOMAIN,
+    hasSupabaseServiceRole: !!c.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasEncryptionKey: !!c.env.ENCRYPTION_KEY
+  })
+})
+
+// DEBUG ENDPOINT: Test DNS resolution via DoH
+plaid.post('/debug_dns', async (c) => {
+  try {
+    const q = name => fetch(`https://cloudflare-dns.com/dns-query?name=${name}&type=A`, { 
+      headers: { accept: 'application/dns-json' } 
+    }).then(r => r.json());
+    
+    const g = name => fetch(`https://dns.google/resolve?name=${name}&type=A`)
+      .then(r => r.json());
+    
+    const names = ["google.com", "production.api.plaid.com","development.api.plaid.com","sandbox.api.plaid.com"];
+    
+    const [cf, gg] = await Promise.all([
+      Promise.all(names.map(q)),
+      Promise.all(names.map(g))
+    ]);
+    
+    return c.json({ 
+      cloudflare_dns: cf, 
+      google_dns: gg,
+      zone_type: "Custom domain (likely Partial/CNAME setup)",
+      worker_route: "api.bankstatementretriever.com"
+    });
+    
+  } catch (error) {
+    return c.json({
+      error: 'DNS test failed',
+      message: error.message
+    });
+  }
+})
+
 // TEST ENDPOINT: Create link token without auth (MVP testing only)
 plaid.post('/test_link_token', async (c) => {
   try {
     console.log('TEST: Creating Plaid link token without authentication')
+    console.log('Environment check:', {
+      hasPlaidClientId: !!c.env.PLAID_CLIENT_ID,
+      hasPlaidSecret: !!c.env.PLAID_SECRET,
+      plaidEnv: c.env.PLAID_ENV,
+      domain: c.env.DOMAIN
+    })
     
     let plaidService
     
     try {
       plaidService = new PlaidService(c.env)
+      console.log('PlaidService created successfully')
     } catch (error) {
       console.error('PlaidService initialization error:', error)
       
       if (error.message.includes('environment variable is required')) {
         return c.json({
           error: 'BSR_CONFIG_ERROR',
-          message: 'Plaid service configuration incomplete. Missing environment variables.'
+          message: 'Plaid service configuration incomplete. Missing environment variables.',
+          details: error.message
         }, 500)
       }
       
       throw error // Re-throw non-config errors
     }
     
+    console.log('Calling createLinkToken...')
     const linkTokenResponse = await plaidService.createLinkToken('test_user_123')
+    console.log('Link token created successfully')
     
     return c.json({
       link_token: linkTokenResponse.link_token,
@@ -109,9 +163,15 @@ plaid.post('/test_link_token', async (c) => {
       }, 400)
     }
     
+    // Expose detailed error for debugging
     return c.json({
       error: 'BSR_INTERNAL_ERROR',
-      message: 'Failed to create test link token'
+      message: 'Failed to create test link token',
+      debug: {
+        errorName: error.name,
+        errorMessage: error.message,
+        stack: error.stack?.split('\n').slice(0, 5) // First 5 lines of stack
+      }
     }, 500)
   }
 })
@@ -156,16 +216,38 @@ plaid.post('/link_token', async (c) => {
     console.error('Link token creation error:', error)
     
     if (error instanceof PlaidAPIError) {
+      // Provide more specific error messages based on Plaid error codes
+      let userMessage = error.plaidError.error_message
+      
+      if (error.plaidError.error_code === 'INVALID_PRODUCT') {
+        userMessage = 'The statements product is not available for your Plaid environment. Please contact support.'
+      } else if (error.plaidError.error_code === 'INVALID_CREDENTIALS') {
+        userMessage = 'Plaid API credentials are invalid. Please check configuration.'
+      } else if (error.plaidError.error_code === 'PRODUCT_NOT_ENABLED') {
+        userMessage = 'The required Plaid product is not enabled for your account.'
+      }
+      
       return c.json({
         error: 'BSR_PLAID_ERROR',
-        message: error.plaidError.error_message,
-        plaid_error: error.plaidError
+        message: userMessage,
+        plaid_error: {
+          error_type: error.plaidError.error_type,
+          error_code: error.plaidError.error_code,
+          error_message: error.plaidError.error_message
+        }
       }, 400)
     }
     
+    // Log the full error for debugging but don't expose internal details
+    console.error('Non-Plaid error in link token creation:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
+    
     return c.json({
       error: 'BSR_INTERNAL_ERROR',
-      message: 'Failed to create link token'
+      message: 'Failed to create link token. Please try again or contact support.'
     }, 500)
   }
 })
@@ -214,10 +296,11 @@ plaid.post('/exchange_public_token', async (c) => {
     const encryptedToken = await encryption.encrypt(exchangeResponse.access_token)
     
     // Step 4: Store connection in database
+    const supabase = createSupabaseClient(c.env)
     const { data: connection, error: connectionError } = await supabase
       .from('connections')
       .insert({
-        org_id: user.id, // Use user.id as org_id for MVP
+        org_id: user.org_id, // Uses user.org_id (fallback to user.id from auth)
         plaid_item_id: exchangeResponse.item_id,
         institution: accountsResponse.item.institution_id || 'unknown',
         access_token_encrypted: `${encryptedToken.encrypted}:${encryptedToken.iv}`,

@@ -131,9 +131,9 @@ export class PlaidService {
     }
 
     this.baseUrl = {
-      sandbox: 'https://sandbox.api.plaid.com',
-      development: 'https://development.api.plaid.com', 
-      production: 'https://production.api.plaid.com'
+      sandbox: 'https://sandbox.plaid.com',
+      development: 'https://development.plaid.com', 
+      production: 'https://production.plaid.com'
     }[this.config.environment]
 
     if (!this.baseUrl) {
@@ -145,6 +145,12 @@ export class PlaidService {
    * Create a link token for Plaid Link initialization
    */
   async createLinkToken(userId: string): Promise<LinkTokenCreateResponse> {
+    // Use different products based on environment
+    // statements product may not be available in sandbox/development
+    const products = this.config.environment === 'production' 
+      ? ['statements'] 
+      : ['transactions']  // fallback for development/sandbox
+    
     const request: LinkTokenCreateRequest = {
       client_name: 'BankStatementRetriever',
       country_codes: ['US'],
@@ -152,7 +158,7 @@ export class PlaidService {
       user: {
         client_user_id: userId
       },
-      products: ['statements'],
+      products: products,
       webhook: this.config.webhook,
       account_filters: {
         depository: {
@@ -164,7 +170,25 @@ export class PlaidService {
       }
     }
 
-    return this.makeRequest<LinkTokenCreateResponse>('/link/token/create', request)
+    try {
+      return await this.makeRequest<LinkTokenCreateResponse>('/link/token/create', request)
+    } catch (error) {
+      // If statements product fails, retry with transactions product
+      if (error instanceof PlaidAPIError && 
+          error.plaidError.error_code === 'INVALID_PRODUCT' &&
+          products.includes('statements')) {
+        console.log('Statements product not available, retrying with transactions')
+        
+        const fallbackRequest = {
+          ...request,
+          products: ['transactions']
+        }
+        
+        return this.makeRequest<LinkTokenCreateResponse>('/link/token/create', fallbackRequest)
+      }
+      
+      throw error
+    }
   }
 
   /**
@@ -249,7 +273,10 @@ export class PlaidService {
     console.log('Request payload:', JSON.stringify(data, null, 2))
     
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      // WORKAROUND: Remove cf-workers-preview-token header to fix Cloudflare 530/1016 error
+      // in Partial (CNAME) setup zones. This is a known Cloudflare Workers issue.
+      // Reference: https://developers.cloudflare.com/workers/platform/known-issues/
+      const request = new Request(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,6 +286,11 @@ export class PlaidService {
         },
         body: JSON.stringify(data)
       })
+      
+      // Apply Cloudflare workaround for DNS resolution in CNAME setups
+      request.headers.delete('cf-workers-preview-token')
+      
+      const response = await fetch(request)
 
       console.log(`Plaid API response status: ${response.status}`)
       
@@ -267,7 +299,7 @@ export class PlaidService {
 
       if (!response.ok) {
         console.error(`Plaid API ${endpoint} failed with status ${response.status}:`, responseData)
-        throw new PlaidAPIError(responseData)
+        throw new PlaidAPIError(responseData as PlaidError)
       }
 
       return responseData as T

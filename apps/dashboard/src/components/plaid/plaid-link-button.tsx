@@ -19,6 +19,7 @@ export function PlaidLinkButton() {
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
   const [showConsentDialog, setShowConsentDialog] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
+  const [connectionCompleted, setConnectionCompleted] = useState(false)
   const [consentData, setConsentData] = useState({
     authorizeRetrieval: false,
     hasAuthority: false,
@@ -36,6 +37,7 @@ export function PlaidLinkButton() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       setShowConsentDialog(false)
+      setConnectionCompleted(true)
       addNotification({
         type: 'success',
         title: 'Bank account connected',
@@ -78,12 +80,12 @@ export function PlaidLinkButton() {
     setHasMounted(true)
   }, [])
 
-  // Auto-open Plaid Link when token is ready and link is ready
+  // Auto-open Plaid Link when token is ready and link is ready (but not after completion)
   useEffect(() => {
-    if (hasMounted && linkToken && ready && !showConsentDialog && !exchangeMutation.isPending) {
+    if (hasMounted && linkToken && ready && !showConsentDialog && !exchangeMutation.isPending && !connectionCompleted) {
       open()
     }
-  }, [hasMounted, linkToken, ready, open, showConsentDialog, exchangeMutation.isPending])
+  }, [hasMounted, linkToken, ready, open, showConsentDialog, exchangeMutation.isPending, connectionCompleted])
 
   const generateLinkToken = async () => {
     setIsGeneratingToken(true)
@@ -115,6 +117,9 @@ export function PlaidLinkButton() {
   }
 
   const handleClick = () => {
+    // Reset completion state when starting a new connection
+    setConnectionCompleted(false)
+    
     if (linkToken && ready) {
       open()
     } else {
@@ -159,6 +164,7 @@ export function PlaidLinkButton() {
           {!hasMounted ? 'Loading...' :
            isGeneratingToken ? 'Initializing...' : 
            exchangeMutation.isPending ? 'Connecting...' : 
+           connectionCompleted ? 'Connect Another Account' :
            'Connect Bank Account'}
         </span>
       </Button>

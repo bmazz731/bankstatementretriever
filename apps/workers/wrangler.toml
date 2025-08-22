@@ -10,6 +10,9 @@ routes = [
   { pattern = "api.bankstatementretriever.com/*", zone_name = "bankstatementretriever.com" }
 ]
 
+# Alternative workers.dev route for testing DNS issues
+# Access via: https://bankstatementretriever-api.your-subdomain.workers.dev
+
 # Environment Variables
 [vars]
 ENVIRONMENT = "production"

@@ -22,10 +22,22 @@ export async function authenticateSupabaseUser(c: any) {
   const token = authHeader.replace('Bearer ', '')
   const supabase = createSupabaseClient(c.env)
   
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) {
-    return { error: 'Invalid token', user: null }
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (error || !user) {
+      return { error: 'Invalid token', user: null }
+    }
+    
+    // For MVP, use user.id as org_id if org_id is not present
+    // This provides backward compatibility and ensures queries work
+    const userWithOrgId = {
+      ...user,
+      org_id: (user as any).org_id || user.id
+    }
+    
+    return { error: null, user: userWithOrgId }
+  } catch (error) {
+    console.error('Supabase authentication error:', error)
+    return { error: 'Authentication service unavailable', user: null }
   }
-  
-  return { error: null, user }
 }
