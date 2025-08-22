@@ -324,26 +324,7 @@ plaid.post('/exchange_public_token', async (c) => {
         const orgId = crypto.randomUUID()
         console.log('Generated org ID:', orgId, 'for user:', user.id)
         
-        // Step 1: Create user first (with temporary org_id that will be updated)
-        const { error: userError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            org_id: orgId,
-            email: user.email || user.user_metadata?.email
-          })
-        
-        if (userError) {
-          console.error('Failed to create user:', userError)
-          return c.json({
-            error: 'BSR_DATABASE_ERROR',
-            message: 'Failed to create user account',
-            debug: { userError, user_id: user.id, org_id: orgId }
-          }, 500)
-        }
-        console.log('User record created successfully')
-        
-        // Step 2: Now create organization (user exists for foreign key constraint)
+        // Step 1: Create organization FIRST (so it exists when user references it)
         const { error: orgError } = await supabase
           .from('organizations')
           .insert({
@@ -352,6 +333,75 @@ plaid.post('/exchange_public_token', async (c) => {
             plan: 'free',
             status: 'active'
           })
+        
+        if (orgError) {
+          console.error('DETAILED ORG ERROR (creating org first):', {
+            error: orgError,
+            errorCode: orgError.code,
+            errorMessage: orgError.message,
+            errorDetails: orgError.details,
+            errorHint: orgError.hint,
+            user_id: user.id,
+            org_id: orgId,
+            context: 'creating_org_first_before_user'
+          })
+          return c.json({
+            error: 'BSR_DATABASE_ERROR',
+            message: 'Failed to create organization',
+            debug: { 
+              orgError: {
+                code: orgError.code,
+                message: orgError.message,
+                details: orgError.details,
+                hint: orgError.hint
+              },
+              user_id: user.id, 
+              org_id: orgId,
+              context: 'org_first_approach'
+            }
+          }, 500)
+        }
+        console.log('Organization created successfully with id:', orgId)
+        
+        // Step 2: Now create user (organization exists for FK constraint)
+        const { error: userError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            org_id: orgId,  // This organization now exists
+            email: user.email || user.user_metadata?.email
+          })
+        
+        if (userError) {
+          console.error('DETAILED USER ERROR (after org created):', {
+            error: userError,
+            errorCode: userError.code,
+            errorMessage: userError.message,
+            errorDetails: userError.details,
+            errorHint: userError.hint,
+            user_id: user.id,
+            org_id: orgId,
+            context: 'user_creation_after_org_exists'
+          })
+          // Clean up the organization we just created
+          await supabase.from('organizations').delete().eq('id', orgId)
+          return c.json({
+            error: 'BSR_DATABASE_ERROR',
+            message: 'Failed to create user account',
+            debug: { 
+              userError: {
+                code: userError.code,
+                message: userError.message,
+                details: userError.details,
+                hint: userError.hint
+              },
+              user_id: user.id, 
+              org_id: orgId,
+              context: 'org_created_first'
+            }
+          }, 500)
+        }
+        console.log('User record created successfully')
         
         if (orgError) {
           console.error('DETAILED ORG ERROR (after user creation):', {
