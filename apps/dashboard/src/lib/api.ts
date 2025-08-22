@@ -60,10 +60,7 @@ class ApiClient {
     if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
     
     const query = searchParams.toString()
-    const result = await this.request(`/api/accounts${query ? `?${query}` : ''}`)
-    
-    // Fix double-wrapping issue: return the API response directly
-    return result.data || result
+    return this.request(`/api/accounts${query ? `?${query}` : ''}`)
   }
 
   async deleteAccount(accountId: string) {
