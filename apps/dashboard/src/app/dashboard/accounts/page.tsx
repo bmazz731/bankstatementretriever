@@ -57,6 +57,11 @@ export default function AccountsPage() {
 
   const accountData = getAccountsData(accounts)
 
+  // Debug logging to understand current data structure
+  console.log('DEBUG - accounts:', accounts)
+  console.log('DEBUG - accountData:', accountData)
+  console.log('DEBUG - accountData length:', accountData.length)
+
   // Safe property access helper to prevent React crashes
   const safeAccess = <T>(obj: any, path: string[], defaultValue: T): T => {
     try {
