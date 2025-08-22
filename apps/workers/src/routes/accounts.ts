@@ -13,6 +13,61 @@ accounts.use('*', requestId)
 accounts.use('*', apiLogger)
 accounts.use('*', errorHandler)
 
+// DEBUG ENDPOINT: Check accounts data
+accounts.get('/debug', async (c) => {
+  try {
+    const { error, user } = await authenticateSupabaseUser(c)
+    if (error) {
+      return c.json({
+        error: 'BSR_AUTH_ERROR',
+        message: error
+      }, 401)
+    }
+
+    const supabase = createSupabaseClient(c.env)
+
+    // Check what connections exist for this user
+    const { data: connections, error: connError } = await supabase
+      .from('connections')
+      .select('*')
+      .eq('org_id', user.org_id)
+
+    // Check what accounts exist (all accounts)
+    const { data: allAccounts, error: allAccountsError } = await supabase
+      .from('accounts')
+      .select('*')
+
+    // Check accounts with connection info
+    const { data: accountsWithConnections, error: joinError } = await supabase
+      .from('accounts')
+      .select(`
+        *,
+        connection:connections(*)
+      `)
+
+    return c.json({
+      user_org_id: user.org_id,
+      connections_count: connections?.length || 0,
+      connections: connections,
+      all_accounts_count: allAccounts?.length || 0,
+      all_accounts: allAccounts,
+      accounts_with_connections: accountsWithConnections,
+      errors: {
+        connections: connError,
+        all_accounts: allAccountsError,
+        join: joinError
+      }
+    })
+
+  } catch (error) {
+    console.error('Debug accounts error:', error)
+    return c.json({
+      error: 'BSR_INTERNAL_ERROR',
+      message: error.message
+    }, 500)
+  }
+})
+
 // Get all accounts for authenticated user
 accounts.get('/', async (c) => {
   try {
@@ -27,6 +82,32 @@ accounts.get('/', async (c) => {
     const supabase = createSupabaseClient(c.env)
 
     const { status, page = '1', page_size = '20' } = c.req.query()
+    
+    // First get connection IDs for this user's org
+    const { data: userConnections, error: connectionsError } = await supabase
+      .from('connections')
+      .select('id')
+      .eq('org_id', user.org_id)
+      
+    if (connectionsError) {
+      console.error('Database connections error:', connectionsError)
+      return c.json({
+        error: 'BSR_DATABASE_ERROR',
+        message: 'Failed to retrieve connections'
+      }, 500)
+    }
+    
+    const connectionIds = userConnections?.map(conn => conn.id) || []
+    
+    if (connectionIds.length === 0) {
+      // No connections for this user, return empty result
+      return c.json({
+        data: [],
+        page: parseInt(page),
+        page_size: parseInt(page_size),
+        total: 0
+      })
+    }
     
     // Build query for accounts with connections  
     let query = supabase
@@ -52,7 +133,7 @@ accounts.get('/', async (c) => {
           updated_at
         )
       `)
-      .eq('connections.org_id', user.org_id)
+      .in('connection_id', connectionIds)
     
     // Filter by status if provided
     if (status && status !== 'all') {
@@ -80,7 +161,7 @@ accounts.get('/', async (c) => {
     const { count, error: countError } = await supabase
       .from('accounts')
       .select('id', { count: 'exact', head: true })
-      .eq('connections.org_id', user.org_id)
+      .in('connection_id', connectionIds)
     
     if (countError) {
       console.error('Database count error:', countError)
@@ -146,13 +227,24 @@ accounts.post('/:accountId/sync', async (c) => {
       .from('accounts')
       .select(`
         id,
-        connection:connections(org_id)
+        connection_id,
+        connection:connections(
+          id,
+          org_id
+        )
       `)
       .eq('id', accountId)
-      .eq('connections.org_id', user.org_id)
       .single()
-    
+      
     if (accountError || !account) {
+      return c.json({
+        error: 'BSR_NOT_FOUND',
+        message: 'Account not found'
+      }, 404)
+    }
+    
+    // Check if the account belongs to the user's organization
+    if (!account?.connection || account.connection.org_id !== user.org_id) {
       return c.json({
         error: 'BSR_NOT_FOUND',
         message: 'Account not found'
