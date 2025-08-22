@@ -355,8 +355,8 @@ plaid.post('/exchange_public_token', async (c) => {
         errorMessage: connectionError.message,
         errorDetails: connectionError.details,
         errorHint: connectionError.hint,
-        user_org_id: validatedUser.org_id,
-        user_id: validatedUser.id,
+        user_org_id: user.org_id,
+        user_id: user.id,
         plaid_item_id: exchangeResponse.item_id
       })
       
@@ -367,7 +367,7 @@ plaid.post('/exchange_public_token', async (c) => {
           message: 'Failed to store connection: Organization not found. Please contact support.',
           debug: {
             constraint: connectionError.details,
-            org_id: validatedUser.org_id
+            org_id: user.org_id
           }
         }, 500)
       }
