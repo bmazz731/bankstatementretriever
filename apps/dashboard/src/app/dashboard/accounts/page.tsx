@@ -39,6 +39,14 @@ export default function AccountsPage() {
     queryFn: () => apiClient.getAccounts(),
   })
 
+  // Debug the data structure safely
+  console.log('accounts type:', typeof accounts)
+  console.log('accounts?.data type:', typeof accounts?.data)
+  console.log('Array.isArray(accounts?.data):', Array.isArray(accounts?.data))
+  if (accounts?.data && typeof accounts.data === 'object') {
+    console.log('accounts.data keys:', Object.keys(accounts.data))
+  }
+  
   const accountData = Array.isArray(accounts?.data) ? accounts.data : []
 
   const filteredAccounts = accountData.filter((account) => {
