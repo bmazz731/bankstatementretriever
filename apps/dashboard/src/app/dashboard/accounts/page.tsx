@@ -160,7 +160,7 @@ export default function AccountsPage() {
             ) : (
               <div className="space-y-4">
                 {filteredAccounts.map((account) => {
-                  const statusColor = getStatusColor(account.status)
+                  const statusColor = getStatusColor(account.status || 'unknown')
                   const connectionStatus = account.connection?.status || 'unknown'
                   const lastSync = account.last_statement_check || account.connection?.last_sync
 
@@ -184,7 +184,7 @@ export default function AccountsPage() {
                                   }
                                   className="ml-2"
                                 >
-                                  {account.status}
+                                  {account.status || 'unknown'}
                                 </Badge>
                               </div>
                             </div>
