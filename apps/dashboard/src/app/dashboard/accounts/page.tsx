@@ -41,6 +41,13 @@ export default function AccountsPage() {
 
   const accountData = Array.isArray(accounts?.data) ? accounts.data : []
 
+  // Debug logging
+  console.log('DEBUG - Raw accounts response:', accounts)
+  console.log('DEBUG - Account data extracted:', accountData)
+  console.log('DEBUG - Account data length:', accountData.length)
+  console.log('DEBUG - Search term:', searchTerm)
+  console.log('DEBUG - Status filter:', statusFilter)
+
   const filteredAccounts = accountData.filter((account) => {
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       account.connection?.institution_name?.toLowerCase().includes(searchTerm.toLowerCase())
