@@ -45,7 +45,7 @@ class ApiClient {
         return { error: data.error || data.message || `Request failed with status ${response.status}` }
       }
 
-      return { data }
+      return data
     } catch (error) {
       console.error('API request failed:', error)
       return { error: 'Network error' }
