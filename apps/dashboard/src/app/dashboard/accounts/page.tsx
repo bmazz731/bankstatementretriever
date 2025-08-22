@@ -39,7 +39,16 @@ export default function AccountsPage() {
     queryFn: () => apiClient.getAccounts(),
   })
 
-  const accountData = Array.isArray(accounts?.data?.data) ? accounts.data.data : []
+  // Extract accounts data with proper error handling
+  const accountData = (() => {
+    if (Array.isArray(accounts?.data?.data)) {
+      return accounts.data.data
+    }
+    if (Array.isArray(accounts?.data)) {
+      return accounts.data  
+    }
+    return []
+  })()
 
   const filteredAccounts = accountData.filter((account) => {
     const matchesSearch = account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
