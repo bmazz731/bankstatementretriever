@@ -308,6 +308,37 @@ plaid.post('/exchange_public_token', async (c) => {
     
     if (!existingOrg) {
       console.log('Organization does not exist, creating it with id:', user.org_id)
+      
+      // Handle case where org_id equals user.id (circular reference)
+      // First check if user exists in our database
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+      
+      if (!existingUser) {
+        console.log('Creating user record first to handle circular reference')
+        const { error: userError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            org_id: user.org_id,
+            email: user.email || user.user_metadata?.email
+          })
+        
+        if (userError) {
+          console.error('Failed to create user:', userError)
+          return c.json({
+            error: 'BSR_DATABASE_ERROR',
+            message: 'Failed to create user account',
+            debug: { userError, user_id: user.id, org_id: user.org_id }
+          }, 500)
+        }
+        console.log('User record created successfully')
+      }
+      
+      // Now create organization
       const { error: orgError } = await supabase
         .from('organizations')
         .insert({
